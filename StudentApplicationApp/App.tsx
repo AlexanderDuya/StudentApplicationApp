@@ -13,7 +13,7 @@ import { AddApplicationScreen } from "./screens/AddApplicationScreen";
 import { WorkspaceOverviewScreen } from "./screens/WorkspaceOverviewScreen";
 import { JobSpecBreakdownScreen } from "./screens/JobSpecBreakdownScreen";
 
-type Screen =
+export type Screen =
   | "home"
   | "add-application"
   | "workspace-overview"
@@ -185,9 +185,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     opacity: 0.6,
   },
-  navIconActive: {
-    opacity: 1,
-  },
+  navIconActive: { opacity: 1 },
   navText: {
     fontSize: 10,
     color: "#9CA3AF",

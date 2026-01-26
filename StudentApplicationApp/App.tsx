@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
@@ -29,6 +30,8 @@ export type Workspace = {
 };
 
 const normalizeJobUrl = (url: string) => url.trim().toLowerCase();
+const WORKSPACES_STORAGE_KEY = "workspaces:v1";
+const LAST_WORKSPACE_ID_KEY = "lastWorkspaceId:v1";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
@@ -38,7 +41,47 @@ export default function App() {
 
   // local storage for now
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
 
+  useEffect(() => {
+    const hydrate = async () => {
+      try {
+        const [rawWorkspaces, lastId] = await Promise.all([
+          AsyncStorage.getItem(WORKSPACES_STORAGE_KEY),
+          AsyncStorage.getItem(LAST_WORKSPACE_ID_KEY),
+        ]);
+
+        if (rawWorkspaces) {
+          const parsed = JSON.parse(rawWorkspaces) as Workspace[];
+          setWorkspaces(parsed);
+
+          console.log("Hydrated workspaces:", parsed.length);
+        }
+
+        if (lastId) {
+          setSelectedApplicationId(lastId);
+
+          console.log("Hydrated lastWorkspaceId:", lastId);
+        }
+      } catch (e) {
+        console.log("Hydration error:", e);
+      } finally {
+        setIsHydrated(true);
+      }
+    };
+
+    void hydrate();
+  }, []);
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    void AsyncStorage.setItem(
+      WORKSPACES_STORAGE_KEY,
+      JSON.stringify(workspaces),
+    );
+
+    console.log("Saved workspaces:", workspaces.length);
+  }, [workspaces, isHydrated]);
   const findWorkspaceIdByJobUrl = (jobUrl: string) => {
     const target = normalizeJobUrl(jobUrl);
     const found = workspaces.find(
@@ -53,6 +96,11 @@ export default function App() {
     role?: string;
     jobDescription?: string;
   }) => {
+    if (data.jobUrl) {
+      const existingId = findWorkspaceIdByJobUrl(data.jobUrl);
+      if (existingId) return existingId;
+    }
+
     const now = Date.now();
     const id = String(now);
 
@@ -70,7 +118,16 @@ export default function App() {
 
   const navigate = (screen: Screen, applicationId?: string) => {
     setCurrentScreen(screen);
-    if (applicationId) setSelectedApplicationId(applicationId);
+
+    if (applicationId) {
+      setSelectedApplicationId(applicationId);
+
+      if (screen === "workspace-overview") {
+        void AsyncStorage.setItem(LAST_WORKSPACE_ID_KEY, applicationId);
+
+        console.log("Set lastWorkspaceId:", applicationId);
+      }
+    }
   };
 
   const renderScreen = () => {

@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Screen } from "../App";
 import {
   View,
@@ -22,68 +23,161 @@ type FutureScreen =
 
 type StepScreen = Screen | FutureScreen;
 
+type Step = {
+  id: number;
+  title: string;
+  completed: boolean;
+  screen: StepScreen;
+};
+
+const stepsStorageKey = (applicationId: string) =>
+  `workspace:${applicationId}:checklistSteps`;
+
+const BASE_STEPS: Step[] = [
+  {
+    id: 1,
+    title: "Review job description",
+    completed: true,
+    screen: "job-spec-breakdown",
+  },
+  {
+    id: 2,
+    title: "Key requirements extracted",
+    completed: true,
+    screen: "job-spec-breakdown",
+  },
+  {
+    id: 3,
+    title: "Map evidence to requirements",
+    completed: false,
+    screen: "evidence-mapper",
+  },
+  {
+    id: 4,
+    title: "Tailor CV bullets",
+    completed: false,
+    screen: "tailor-cv",
+  },
+  {
+    id: 5,
+    title: "Draft cover letter points",
+    completed: false,
+    screen: "versions-library",
+  },
+  {
+    id: 6,
+    title: "Company research notes",
+    completed: false,
+    screen: "company-research",
+  },
+  {
+    id: 7,
+    title: "Final review",
+    completed: false,
+    screen: "strength-breakdown",
+  },
+  {
+    id: 8,
+    title: "Export tailored version",
+    completed: false,
+    screen: "versions-library",
+  },
+];
+
 export function WorkspaceOverviewScreen({
   onNavigate,
   applicationId,
 }: WorkspaceOverviewScreenProps) {
-  const steps: Array<{
-    id: number;
-    title: string;
-    completed: boolean;
-    screen: StepScreen;
-  }> = [
-    {
-      id: 1,
-      title: "Review job description",
-      completed: true,
-      screen: "job-spec-breakdown",
-    },
-    {
-      id: 2,
-      title: "Key requirements extracted",
-      completed: true,
-      screen: "job-spec-breakdown",
-    },
-    {
-      id: 3,
-      title: "Map evidence to requirements",
-      completed: false,
-      screen: "evidence-mapper",
-    },
-    {
-      id: 4,
-      title: "Tailor CV bullets",
-      completed: false,
-      screen: "tailor-cv",
-    },
-    {
-      id: 5,
-      title: "Draft cover letter points",
-      completed: false,
-      screen: "versions-library",
-    },
-    {
-      id: 6,
-      title: "Company research notes",
-      completed: false,
-      screen: "company-research",
-    },
-    {
-      id: 7,
-      title: "Final review",
-      completed: false,
-      screen: "strength-breakdown",
-    },
-    {
-      id: 8,
-      title: "Export tailored version",
-      completed: false,
-      screen: "versions-library",
-    },
-  ];
+  const [steps, setSteps] = useState<Step[]>(BASE_STEPS);
 
-  const completedSteps = steps.filter((s) => s.completed).length;
-  const progressPercentage = (completedSteps / steps.length) * 100;
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(stepsStorageKey(applicationId));
+
+        console.log(
+          "Loaded steps for key:",
+          stepsStorageKey(applicationId),
+          raw,
+        );
+
+        if (!raw) return;
+
+        const saved: Record<string, boolean> = JSON.parse(raw);
+        if (cancelled) return;
+
+        setSteps((prev) =>
+          prev.map((s) => ({
+            ...s,
+            completed: saved[String(s.id)] ?? s.completed,
+          })),
+        );
+      } catch {}
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applicationId]);
+
+  const saveSteps = async (nextSteps: Step[]) => {
+    const map: Record<string, boolean> = {};
+    nextSteps.forEach((s) => {
+      map[String(s.id)] = s.completed;
+    });
+
+    await AsyncStorage.setItem(
+      stepsStorageKey(applicationId),
+      JSON.stringify(map),
+    );
+
+    console.log("Saved steps for key:", stepsStorageKey(applicationId));
+  };
+
+  const toggleStep = (stepId: number) => {
+    setSteps((prev) => {
+      const next = prev.map((s) =>
+        s.id === stepId ? { ...s, completed: !s.completed } : s,
+      );
+
+      void saveSteps(next);
+      return next;
+    });
+  };
+
+  const completedSteps = useMemo(
+    () => steps.filter((s) => s.completed).length,
+    [steps],
+  );
+
+  // progress calc (10% increments for now)
+  const progressPercentage = useMemo(() => {
+    const raw = (completedSteps / steps.length) * 100;
+    const roundedDownTo10 = Math.floor(raw / 10) * 10;
+    return Math.min(100, Math.max(0, roundedDownTo10));
+  }, [completedSteps, steps.length]);
+
+  // TODO: application strength should come from an API later sprint will cover
+  const strengthPercentage = progressPercentage;
+
+  const strengthLabel = useMemo(() => {
+    if (strengthPercentage >= 80) return "Excellent - Nearly there!";
+    if (strengthPercentage >= 60) return "Strong - Keep going!";
+    if (strengthPercentage >= 40) return "Getting there - Nice progress!";
+    return "Needs work - You’ve got this!";
+  }, [strengthPercentage]);
+
+  const strengthBarFillColor = useMemo(() => {
+    if (strengthPercentage >= 80) return "#22C55E";
+    if (strengthPercentage >= 50) return "#EAB308";
+    return "#EF4444";
+  }, [strengthPercentage]);
+
+  const filledStrengthBars = Math.ceil(strengthPercentage / 20);
 
   const canNavigate = (screen: StepScreen): screen is Screen => {
     return (
@@ -166,14 +260,19 @@ export function WorkspaceOverviewScreen({
                   key={i}
                   style={[
                     styles.strengthBar,
-                    { backgroundColor: i <= 3 ? "#EAB308" : "#E9D5FF" },
+                    {
+                      backgroundColor:
+                        i <= filledStrengthBars
+                          ? strengthBarFillColor
+                          : "#E9D5FF",
+                    },
                   ]}
                 />
               ))}
             </View>
-            <Text style={styles.strengthDescription}>Strong - Keep going!</Text>
+            <Text style={styles.strengthDescription}>{strengthLabel}</Text>
           </View>
-          <Text style={styles.strengthPercentage}>65%</Text>
+          <Text style={styles.strengthPercentage}>{strengthPercentage}%</Text>
         </View>
 
         <View style={styles.strengthInfo}>
@@ -197,6 +296,7 @@ export function WorkspaceOverviewScreen({
               key={step.id}
               onPress={() => {
                 // TODO: decide what screen to open for completed steps
+                toggleStep(step.id);
               }}
               style={styles.stepItem}
             >

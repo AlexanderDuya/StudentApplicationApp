@@ -19,11 +19,54 @@ export type Screen =
   | "workspace-overview"
   | "job-spec-breakdown";
 
+export type Workspace = {
+  id: string;
+  jobUrl?: string;
+  company?: string;
+  role?: string;
+  jobDescription?: string;
+  createdAt: number;
+};
+
+const normalizeJobUrl = (url: string) => url.trim().toLowerCase();
+
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
   const [selectedApplicationId, setSelectedApplicationId] = useState<
     string | null
   >(null);
+
+  // local storage for now
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+
+  const findWorkspaceIdByJobUrl = (jobUrl: string) => {
+    const target = normalizeJobUrl(jobUrl);
+    const found = workspaces.find(
+      (w) => w.jobUrl && normalizeJobUrl(w.jobUrl) === target,
+    );
+    return found?.id ?? null;
+  };
+
+  const createWorkspace = (data: {
+    jobUrl?: string;
+    company?: string;
+    role?: string;
+    jobDescription?: string;
+  }) => {
+    const now = Date.now();
+    const id = String(now);
+
+    setWorkspaces((prev) => [
+      ...prev,
+      {
+        id,
+        createdAt: now,
+        ...data,
+      },
+    ]);
+
+    return id;
+  };
 
   const navigate = (screen: Screen, applicationId?: string) => {
     setCurrentScreen(screen);
@@ -36,13 +79,30 @@ export default function App() {
         return <HomeScreen onNavigate={navigate} />;
 
       case "add-application":
-        return <AddApplicationScreen onNavigate={navigate} />;
+        return (
+          <AddApplicationScreen
+            onNavigate={navigate}
+            findWorkspaceIdByJobUrl={findWorkspaceIdByJobUrl}
+            createWorkspace={createWorkspace}
+          />
+        );
 
       case "workspace-overview":
+        // If somehow user lands here without an id, send them to Add
+        if (!selectedApplicationId) {
+          return (
+            <AddApplicationScreen
+              onNavigate={navigate}
+              findWorkspaceIdByJobUrl={findWorkspaceIdByJobUrl}
+              createWorkspace={createWorkspace}
+            />
+          );
+        }
+
         return (
           <WorkspaceOverviewScreen
             onNavigate={navigate}
-            applicationId={selectedApplicationId || "1"}
+            applicationId={selectedApplicationId}
           />
         );
 
@@ -54,9 +114,13 @@ export default function App() {
     }
   };
 
-  const goWorkspace = () =>
-    navigate("workspace-overview", selectedApplicationId || "1");
-
+  const goWorkspace = () => {
+    if (!selectedApplicationId) {
+      navigate("add-application");
+      return;
+    }
+    navigate("workspace-overview", selectedApplicationId);
+  };
   // using emojis from now, will need to replace with suitable icons later
   return (
     <SafeAreaProvider>

@@ -11,19 +11,140 @@ import {
 
 interface AddApplicationScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
+  findWorkspaceIdByJobUrl: (jobUrl: string) => string | null;
+  createWorkspace: (data: {
+    jobUrl?: string;
+    company?: string;
+    role?: string;
+    jobDescription?: string;
+  }) => string;
 }
 
 export function AddApplicationScreen({
   onNavigate,
+  findWorkspaceIdByJobUrl,
+  createWorkspace,
 }: AddApplicationScreenProps) {
   const [jobUrl, setJobUrl] = useState("");
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
 
-  const handleCreate = () => {
-    const newApplicationId = String(Date.now());
-    onNavigate("workspace-overview", newApplicationId);
+  const [error, setError] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
+
+  const [manualMode, setManualMode] = useState(false);
+  const [manualJobDescription, setManualJobDescription] = useState("");
+
+  // for duplicates
+  const [duplicateWorkspaceId, setDuplicateWorkspaceId] = useState<
+    string | null
+  >(null);
+
+  const isValidHttpUrl = (value: string) => {
+    try {
+      const url = new URL(value.trim());
+      return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+      return false;
+    }
   };
+
+  const checkUrlReachable = async (url: string) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        signal: controller.signal,
+      });
+      return res.status >= 200 && res.status < 400;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+
+  const createWorkspaceAndGo = (data: {
+    jobUrl?: string;
+    company?: string;
+    role?: string;
+    jobDescription?: string;
+  }) => {
+    const id = createWorkspace(data);
+    onNavigate("workspace-overview", id);
+  };
+
+  const handleCreate = async () => {
+    setError(null);
+    setDuplicateWorkspaceId(null);
+
+    if (manualMode) {
+      if (!manualJobDescription.trim()) {
+        setError(
+          "Please paste the job description so we can create your workspace.",
+        );
+        return;
+      }
+
+      // TODO: store these properly later
+      createWorkspaceAndGo({
+        company,
+        role,
+        jobDescription: manualJobDescription,
+      });
+      return;
+    }
+
+    const trimmed = jobUrl.trim();
+
+    if (!trimmed) {
+      setError("Please paste a job link to continue.");
+      return;
+    }
+
+    if (!isValidHttpUrl(trimmed)) {
+      setError(
+        "That link doesn’t look valid. Please check it, or paste the job description manually instead.",
+      );
+      return;
+    }
+
+    //  DUPLICATE CHECK
+    const existingId = findWorkspaceIdByJobUrl(trimmed);
+    if (existingId) {
+      setDuplicateWorkspaceId(existingId);
+      setError("Looks like you’ve already added this job.");
+      return;
+    }
+
+    setIsChecking(true);
+    try {
+      const ok = await checkUrlReachable(trimmed);
+      if (!ok) {
+        setError(
+          "We couldn’t access that job link right now. No stress, you can paste the job description manually instead.",
+        );
+        return;
+      }
+
+      // TODO: Later extract requirements from the job link
+      createWorkspaceAndGo({
+        jobUrl: trimmed,
+        company,
+        role,
+      });
+    } catch {
+      setError(
+        "We couldn’t reach that link (it might be blocked or offline). You can paste the job description manually instead.",
+      );
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const canSubmit = manualMode
+    ? !!manualJobDescription.trim() && !isChecking
+    : !!jobUrl.trim() && !isChecking;
 
   return (
     <View style={styles.container}>
@@ -45,26 +166,101 @@ export function AddApplicationScreen({
             manageable steps.
           </Text>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Job posting link <Text style={styles.required}>*</Text>
-            </Text>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputIcon}>🔗</Text>
-              <TextInput
-                value={jobUrl}
-                onChangeText={setJobUrl}
-                placeholder="Input Link"
-                placeholderTextColor="#9CA3AF"
-                style={styles.input}
-                autoCapitalize="none"
-                keyboardType="url"
-              />
+          {!manualMode ? (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Job posting link <Text style={styles.required}>*</Text>
+              </Text>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputIcon}>🔗</Text>
+                <TextInput
+                  value={jobUrl}
+                  onChangeText={(v) => {
+                    setJobUrl(v);
+                    if (error) setError(null);
+                    if (duplicateWorkspaceId) setDuplicateWorkspaceId(null);
+                  }}
+                  placeholder="Input Link"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.input}
+                  autoCapitalize="none"
+                  keyboardType="url"
+                />
+              </View>
+
+              <Text style={styles.helperText}>
+                We'll extract the key requirements automatically
+              </Text>
+
+              {error && (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={styles.errorText}>{error}</Text>
+
+                  {duplicateWorkspaceId ? (
+                    <TouchableOpacity
+                      onPress={() =>
+                        onNavigate("workspace-overview", duplicateWorkspaceId)
+                      }
+                      style={{ marginTop: 8 }}
+                    >
+                      <Text style={styles.fallbackLink}>
+                        Open existing workspace
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setManualMode(true);
+                        setError(null);
+                      }}
+                      style={{ marginTop: 8 }}
+                    >
+                      <Text style={styles.fallbackLink}>
+                        Paste job description manually instead
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
             </View>
-            <Text style={styles.helperText}>
-              We'll extract the key requirements automatically
-            </Text>
-          </View>
+          ) : (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Paste job description <Text style={styles.required}>*</Text>
+              </Text>
+
+              <View style={styles.manualBox}>
+                <TextInput
+                  value={manualJobDescription}
+                  onChangeText={(v) => {
+                    setManualJobDescription(v);
+                    if (error) setError(null);
+                  }}
+                  placeholder="Paste the full job description here…"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.manualInput}
+                  multiline
+                />
+              </View>
+
+              {error && (
+                <Text style={[styles.errorText, { marginTop: 10 }]}>
+                  {error}
+                </Text>
+              )}
+
+              <TouchableOpacity
+                onPress={() => {
+                  setManualMode(false);
+                  setError(null);
+                }}
+                style={{ marginTop: 10 }}
+              >
+                <Text style={styles.fallbackLink}>Use job link instead</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
@@ -121,13 +317,15 @@ export function AddApplicationScreen({
       <View style={styles.footer}>
         <TouchableOpacity
           onPress={handleCreate}
-          disabled={!jobUrl}
+          disabled={!canSubmit}
           style={[
             styles.primaryButton,
-            !jobUrl && styles.primaryButtonDisabled,
+            (!canSubmit || isChecking) && styles.primaryButtonDisabled,
           ]}
         >
-          <Text style={styles.primaryButtonText}>Create workspace</Text>
+          <Text style={styles.primaryButtonText}>
+            {isChecking ? "Checking link..." : "Create workspace"}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -190,6 +388,31 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   helperText: { fontSize: 12, color: "#6B7280", marginTop: 8 },
+
+  errorText: {
+    color: "#DC2626",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  fallbackLink: {
+    color: "#14B8A6",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  manualBox: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
+    padding: 12,
+    backgroundColor: "#FFFFFF",
+    minHeight: 140,
+  },
+  manualInput: {
+    fontSize: 14,
+    color: "#111827",
+    minHeight: 120,
+    textAlignVertical: "top",
+  },
 
   infoCard: {
     backgroundColor: "#ECFDF5",

@@ -332,15 +332,10 @@ export function WorkspaceOverviewScreen({
           </Text>
 
           <TouchableOpacity
-            onPress={() => {
-              // TODO: add evidence screen later
-              // onNavigate("evidence-mapper")
-            }}
+            onPress={() => onNavigate("job-spec-breakdown")}
             style={styles.suggestionButton}
           >
-            <Text style={styles.suggestionButtonText}>
-              Start mapping evidence
-            </Text>
+            <Text style={styles.suggestionButtonText}>Go to job spec</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

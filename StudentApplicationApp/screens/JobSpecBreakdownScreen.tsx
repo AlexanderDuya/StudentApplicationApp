@@ -209,7 +209,7 @@ export function JobSpecBreakdownScreen({
 
       <View style={styles.footer}>
         <TouchableOpacity
-          onPress={() => console.log("TODO: go to evidence mapper")}
+          onPress={() => onNavigate("evidence-mapper")}
           style={styles.ctaButton}
         >
           <Text style={styles.ctaButtonText}>Start mapping evidence</Text>

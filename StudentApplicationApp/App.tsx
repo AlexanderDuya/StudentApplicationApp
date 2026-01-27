@@ -14,13 +14,15 @@ import { AddApplicationScreen } from "./screens/AddApplicationScreen";
 import { WorkspaceOverviewScreen } from "./screens/WorkspaceOverviewScreen";
 import { JobSpecBreakdownScreen } from "./screens/JobSpecBreakdownScreen";
 import { JobSpecDescriptionScreen } from "./screens/JobSpecDescriptionScreen";
+import { EvidenceMapperScreen } from "./screens/EvidenceMapperScreen";
 
 export type Screen =
   | "home"
   | "add-application"
   | "workspace-overview"
   | "job-spec-breakdown"
-  | "job-spec-description";
+  | "job-spec-description"
+  | "evidence-mapper";
 
 export type Workspace = {
   id: string;
@@ -169,6 +171,8 @@ export default function App() {
         return <JobSpecBreakdownScreen onNavigate={navigate} />;
       case "job-spec-description":
         return <JobSpecDescriptionScreen onNavigate={navigate} />;
+      case "evidence-mapper":
+        return <EvidenceMapperScreen onNavigate={navigate} />;
 
       default:
         return <HomeScreen onNavigate={navigate} />;

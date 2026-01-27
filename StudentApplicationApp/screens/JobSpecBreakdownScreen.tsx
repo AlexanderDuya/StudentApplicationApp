@@ -9,16 +9,27 @@ import {
 import { Screen } from "../App";
 
 interface JobSpecBreakdownScreenProps {
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, applicationId?: string) => void;
+  jobDescription?: string;
+  company?: string;
+  role?: string;
 }
 
 export function JobSpecBreakdownScreen({
   onNavigate,
+  jobDescription,
+  company,
+  role,
 }: JobSpecBreakdownScreenProps) {
   const [filter, setFilter] = useState<"all" | "must-have" | "nice-to-have">(
     "all",
   );
 
+  const previewText =
+    jobDescription?.trim() ||
+    "Fetching job description this may take a few seconds…";
+
+  // next step is to have requirements from the gemini api like how i did job description
   const requirements = [
     {
       id: "1",
@@ -82,7 +93,7 @@ export function JobSpecBreakdownScreen({
           <View style={styles.headerInfo}>
             <Text style={styles.headerTitle}>Job Spec Breakdown</Text>
             <Text style={styles.headerSubtitle}>
-              Google • Software Engineer Intern
+              {company ?? "Company"} • {role ?? "Role"}
             </Text>
           </View>
         </View>
@@ -155,10 +166,8 @@ export function JobSpecBreakdownScreen({
         <View style={styles.jobPreview}>
           <Text style={styles.jobPreviewTitle}>Original job description</Text>
           <View style={styles.jobPreviewContent}>
-            <Text style={styles.jobPreviewText}>
-              We're looking for a talented Software Engineer Intern to join our
-              team. You'll work on building scalable web applications using
-              React and modern JavaScript...
+            <Text style={styles.jobPreviewText} numberOfLines={4}>
+              {previewText}
             </Text>
             <TouchableOpacity
               onPress={() => onNavigate("job-spec-description")}

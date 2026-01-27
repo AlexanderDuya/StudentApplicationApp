@@ -49,6 +49,12 @@ export default function App() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
 
+  const updateWorkspace = (id: string, patch: Partial<Workspace>) => {
+    setWorkspaces((prev) =>
+      prev.map((w) => (w.id === id ? { ...w, ...patch } : w)),
+    );
+  };
+
   useEffect(() => {
     const hydrate = async () => {
       try {
@@ -147,6 +153,7 @@ export default function App() {
             onNavigate={navigate}
             findWorkspaceIdByJobUrl={findWorkspaceIdByJobUrl}
             createWorkspace={createWorkspace}
+            updateWorkspace={updateWorkspace}
           />
         );
 
@@ -158,6 +165,7 @@ export default function App() {
               onNavigate={navigate}
               findWorkspaceIdByJobUrl={findWorkspaceIdByJobUrl}
               createWorkspace={createWorkspace}
+              updateWorkspace={updateWorkspace}
             />
           );
         }
@@ -169,10 +177,35 @@ export default function App() {
           />
         );
 
-      case "job-spec-breakdown":
-        return <JobSpecBreakdownScreen onNavigate={navigate} />;
-      case "job-spec-description":
-        return <JobSpecDescriptionScreen onNavigate={navigate} />;
+      case "job-spec-breakdown": {
+        const ws = selectedApplicationId
+          ? workspaces.find((w) => w.id === selectedApplicationId)
+          : undefined;
+
+        return (
+          <JobSpecBreakdownScreen
+            onNavigate={navigate}
+            jobDescription={ws?.jobDescription}
+            company={ws?.company}
+            role={ws?.role}
+          />
+        );
+      }
+
+      case "job-spec-description": {
+        const ws = selectedApplicationId
+          ? workspaces.find((w) => w.id === selectedApplicationId)
+          : undefined;
+
+        return (
+          <JobSpecDescriptionScreen
+            onNavigate={navigate}
+            jobDescription={ws?.jobDescription}
+            company={ws?.company}
+            role={ws?.role}
+          />
+        );
+      }
       case "evidence-mapper":
         return <EvidenceMapperScreen onNavigate={navigate} />;
       case "tailor-cv":

@@ -9,27 +9,22 @@ import {
 import { Screen } from "../App";
 
 interface JobSpecDescriptionScreenProps {
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, applicationId?: string) => void;
+  jobDescription?: string;
+  company?: string;
+  role?: string;
 }
 
 export function JobSpecDescriptionScreen({
   onNavigate,
+  jobDescription,
+  company,
+  role,
 }: JobSpecDescriptionScreenProps) {
-  // For now its a fake job despcription and needs to be populated correctly based on the extract job link
+  // If I get some time I can add a loading icon whilst its fetching so its not just static text
   const fullJobDescription =
-    `We're looking for a talented Software Engineer Intern to join our team.\n\n` +
-    `You'll work on building scalable web applications using React and modern JavaScript.\n\n` +
-    `Responsibilities:\n` +
-    `• Build and improve user-facing features\n` +
-    `• Collaborate with engineers and product partners\n` +
-    `• Work with APIs and data flows\n\n` +
-    `Requirements:\n` +
-    `• Strong JavaScript fundamentals\n` +
-    `• React experience (projects/coursework is fine)\n` +
-    `• Good communication and teamwork\n\n` +
-    `Nice-to-have:\n` +
-    `• TypeScript\n` +
-    `• Agile experience\n`;
+    jobDescription?.trim() ||
+    "Fetching job description this may take a few seconds…";
 
   return (
     <View style={styles.container}>
@@ -45,7 +40,7 @@ export function JobSpecDescriptionScreen({
           <View style={styles.headerInfo}>
             <Text style={styles.headerTitle}>Full job description</Text>
             <Text style={styles.headerSubtitle}>
-              Google • Software Engineer Intern
+              {company ?? "Company"} • {role ?? "Role"}
             </Text>
           </View>
         </View>

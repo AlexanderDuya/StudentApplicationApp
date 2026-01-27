@@ -8,6 +8,7 @@ import {
   TextInput,
   StyleSheet,
 } from "react-native";
+import { extractJobDescriptionFromUrl } from "../lib/gemini";
 
 interface AddApplicationScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
@@ -18,12 +19,14 @@ interface AddApplicationScreenProps {
     role?: string;
     jobDescription?: string;
   }) => string;
+  updateWorkspace: (id: string, patch: { jobDescription?: string }) => void;
 }
 
 export function AddApplicationScreen({
   onNavigate,
   findWorkspaceIdByJobUrl,
   createWorkspace,
+  updateWorkspace,
 }: AddApplicationScreenProps) {
   const [jobUrl, setJobUrl] = useState("");
   const [company, setCompany] = useState("");
@@ -72,6 +75,7 @@ export function AddApplicationScreen({
   }) => {
     const id = createWorkspace(data);
     onNavigate("workspace-overview", id);
+    return id;
   };
 
   const handleCreate = async () => {
@@ -128,11 +132,18 @@ export function AddApplicationScreen({
       }
 
       // TODO: Later extract requirements from the job link
-      createWorkspaceAndGo({
+      const id = createWorkspaceAndGo({
         jobUrl: trimmed,
         company,
         role,
       });
+
+      try {
+        const jd = await extractJobDescriptionFromUrl(trimmed);
+        updateWorkspace(id, { jobDescription: jd });
+      } catch (e) {
+        console.log("Failed to extract job description:", e);
+      }
     } catch {
       setError(
         "We couldn’t reach that link (it might be blocked or offline). You can paste the job description manually instead.",

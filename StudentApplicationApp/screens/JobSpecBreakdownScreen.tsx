@@ -160,7 +160,11 @@ export function JobSpecBreakdownScreen({
               team. You'll work on building scalable web applications using
               React and modern JavaScript...
             </Text>
-            <Text style={styles.jobPreviewMore}>Show full description →</Text>
+            <TouchableOpacity
+              onPress={() => onNavigate("job-spec-description")}
+            >
+              <Text style={styles.jobPreviewMore}>Show full description →</Text>
+            </TouchableOpacity>
           </View>
         </View>
 

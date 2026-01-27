@@ -252,7 +252,7 @@ export function EvidenceMapperScreen({
 
       <View style={styles.footer}>
         <TouchableOpacity
-          onPress={() => onNavigate("workspace-overview")}
+          onPress={() => onNavigate("tailor-cv")}
           style={styles.saveButton}
         >
           <Text style={styles.saveButtonText}>Save and continue</Text>

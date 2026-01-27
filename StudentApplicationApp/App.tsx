@@ -15,6 +15,7 @@ import { WorkspaceOverviewScreen } from "./screens/WorkspaceOverviewScreen";
 import { JobSpecBreakdownScreen } from "./screens/JobSpecBreakdownScreen";
 import { JobSpecDescriptionScreen } from "./screens/JobSpecDescriptionScreen";
 import { EvidenceMapperScreen } from "./screens/EvidenceMapperScreen";
+import { TailorCVScreen } from "./screens/TailorCVScreen";
 
 export type Screen =
   | "home"
@@ -22,7 +23,8 @@ export type Screen =
   | "workspace-overview"
   | "job-spec-breakdown"
   | "job-spec-description"
-  | "evidence-mapper";
+  | "evidence-mapper"
+  | "tailor-cv";
 
 export type Workspace = {
   id: string;
@@ -173,7 +175,8 @@ export default function App() {
         return <JobSpecDescriptionScreen onNavigate={navigate} />;
       case "evidence-mapper":
         return <EvidenceMapperScreen onNavigate={navigate} />;
-
+      case "tailor-cv":
+        return <TailorCVScreen onNavigate={navigate} />;
       default:
         return <HomeScreen onNavigate={navigate} />;
     }

@@ -26,12 +26,22 @@ export type Screen =
   | "evidence-mapper"
   | "tailor-cv";
 
+export type RequirementType = "must-have" | "nice-to-have";
+
+export type Requirement = {
+  id: string;
+  title: string;
+  type: RequirementType;
+  category: string;
+};
+
 export type Workspace = {
   id: string;
   jobUrl?: string;
   company?: string;
   role?: string;
   jobDescription?: string;
+  requirements?: Requirement[];
   createdAt: number;
 };
 
@@ -51,8 +61,15 @@ export default function App() {
 
   const updateWorkspace = (id: string, patch: Partial<Workspace>) => {
     setWorkspaces((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, ...patch } : w)),
+      prev.map((w) => (w.id === id ? { ...w, ...patch } : w))
     );
+  };
+  const goJobSpec = () => {
+    if (!selectedApplicationId) {
+      navigate("add-application");
+      return;
+    }
+    navigate("job-spec-breakdown", selectedApplicationId);
   };
 
   useEffect(() => {
@@ -89,7 +106,7 @@ export default function App() {
 
     void AsyncStorage.setItem(
       WORKSPACES_STORAGE_KEY,
-      JSON.stringify(workspaces),
+      JSON.stringify(workspaces)
     );
 
     console.log("Saved workspaces:", workspaces.length);
@@ -97,7 +114,7 @@ export default function App() {
   const findWorkspaceIdByJobUrl = (jobUrl: string) => {
     const target = normalizeJobUrl(jobUrl);
     const found = workspaces.find(
-      (w) => w.jobUrl && normalizeJobUrl(w.jobUrl) === target,
+      (w) => w.jobUrl && normalizeJobUrl(w.jobUrl) === target
     );
     return found?.id ?? null;
   };
@@ -186,6 +203,7 @@ export default function App() {
           <JobSpecBreakdownScreen
             onNavigate={navigate}
             jobDescription={ws?.jobDescription}
+            requirements={ws?.requirements}
             company={ws?.company}
             role={ws?.role}
           />
@@ -296,10 +314,7 @@ export default function App() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={() => navigate("job-spec-breakdown")}
-              style={styles.navButton}
-            >
+            <TouchableOpacity onPress={goJobSpec} style={styles.navButton}>
               <Text
                 style={[
                   styles.navIcon,

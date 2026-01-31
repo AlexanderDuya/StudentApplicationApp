@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { Screen } from "../App";
+import type { Screen, Workspace } from "../App";
 import {
   View,
   Text,
@@ -8,7 +8,10 @@ import {
   TextInput,
   StyleSheet,
 } from "react-native";
-import { extractJobDescriptionFromUrl } from "../lib/gemini";
+import {
+  extractJobDescriptionFromUrl,
+  extractRequirementsFromJobDescription,
+} from "../lib/gemini";
 
 interface AddApplicationScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
@@ -19,7 +22,7 @@ interface AddApplicationScreenProps {
     role?: string;
     jobDescription?: string;
   }) => string;
-  updateWorkspace: (id: string, patch: { jobDescription?: string }) => void;
+  updateWorkspace: (id: string, patch: Partial<Workspace>) => void;
 }
 
 export function AddApplicationScreen({
@@ -85,17 +88,28 @@ export function AddApplicationScreen({
     if (manualMode) {
       if (!manualJobDescription.trim()) {
         setError(
-          "Please paste the job description so we can create your workspace.",
+          "Please paste the job description so we can create your workspace."
         );
         return;
       }
 
       // TODO: store these properly later
-      createWorkspaceAndGo({
+      const id = createWorkspaceAndGo({
         company,
         role,
         jobDescription: manualJobDescription,
       });
+
+      try {
+        const reqs = await extractRequirementsFromJobDescription(
+          manualJobDescription
+        );
+        updateWorkspace(id, { requirements: reqs });
+        console.log("Saved requirements count:", reqs.length, reqs);
+      } catch (e) {
+        console.log("Failed to extract requirements:", e);
+      }
+
       return;
     }
 
@@ -108,7 +122,7 @@ export function AddApplicationScreen({
 
     if (!isValidHttpUrl(trimmed)) {
       setError(
-        "That link doesn’t look valid. Please check it, or paste the job description manually instead.",
+        "That link doesn’t look valid. Please check it, or paste the job description manually instead."
       );
       return;
     }
@@ -126,7 +140,7 @@ export function AddApplicationScreen({
       const ok = await checkUrlReachable(trimmed);
       if (!ok) {
         setError(
-          "We couldn’t access that job link right now. No stress, you can paste the job description manually instead.",
+          "We couldn’t access that job link right now. No stress, you can paste the job description manually instead."
         );
         return;
       }
@@ -141,12 +155,20 @@ export function AddApplicationScreen({
       try {
         const jd = await extractJobDescriptionFromUrl(trimmed);
         updateWorkspace(id, { jobDescription: jd });
+
+        try {
+          const reqs = await extractRequirementsFromJobDescription(jd);
+          updateWorkspace(id, { requirements: reqs });
+          console.log("Saved requirements count:", reqs.length, reqs);
+        } catch (e) {
+          console.log("❌ Requirements extraction failed:", e);
+        }
       } catch (e) {
-        console.log("Failed to extract job description:", e);
+        console.log("❌ Job description extraction failed:", e);
       }
     } catch {
       setError(
-        "We couldn’t reach that link (it might be blocked or offline). You can paste the job description manually instead.",
+        "We couldn’t reach that link (it might be blocked or offline). You can paste the job description manually instead."
       );
     } finally {
       setIsChecking(false);

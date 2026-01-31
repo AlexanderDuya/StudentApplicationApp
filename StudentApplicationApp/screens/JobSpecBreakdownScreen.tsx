@@ -7,22 +7,24 @@ import {
   StyleSheet,
 } from "react-native";
 import { Screen } from "../App";
+import type { Requirement } from "../App";
 
 interface JobSpecBreakdownScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
   jobDescription?: string;
+  requirements?: Requirement[]; // ✅ NEW
   company?: string;
   role?: string;
 }
-
 export function JobSpecBreakdownScreen({
   onNavigate,
   jobDescription,
+  requirements = [],
   company,
   role,
 }: JobSpecBreakdownScreenProps) {
   const [filter, setFilter] = useState<"all" | "must-have" | "nice-to-have">(
-    "all",
+    "all"
   );
 
   const previewText =
@@ -30,54 +32,9 @@ export function JobSpecBreakdownScreen({
     "Fetching job description this may take a few seconds…";
 
   // next step is to have requirements from the gemini api like how i did job description
-  const requirements = [
-    {
-      id: "1",
-      title: "React & JavaScript",
-      type: "must-have",
-      category: "Technical",
-    },
-    {
-      id: "2",
-      title: "Team collaboration",
-      type: "must-have",
-      category: "Soft Skills",
-    },
-    { id: "3", title: "REST APIs", type: "must-have", category: "Technical" },
-    {
-      id: "4",
-      title: "Problem solving",
-      type: "must-have",
-      category: "Soft Skills",
-    },
-    {
-      id: "5",
-      title: "TypeScript",
-      type: "nice-to-have",
-      category: "Technical",
-    },
-    {
-      id: "6",
-      title: "Communication skills",
-      type: "must-have",
-      category: "Soft Skills",
-    },
-    {
-      id: "7",
-      title: "Git & version control",
-      type: "must-have",
-      category: "Technical",
-    },
-    {
-      id: "8",
-      title: "Agile experience",
-      type: "nice-to-have",
-      category: "Process",
-    },
-  ];
 
   const filteredRequirements = requirements.filter(
-    (req) => filter === "all" || req.type === filter,
+    (req) => filter === "all" || req.type === filter
   );
 
   return (
@@ -158,7 +115,9 @@ export function JobSpecBreakdownScreen({
           <View style={styles.aiContent}>
             <Text style={styles.aiTitle}>AI extracted requirements</Text>
             <Text style={styles.aiDescription}>
-              We've analyzed the job spec and identified 8 key requirements.
+              {requirements.length
+                ? `We've analyzed the job spec and identified ${requirements.length} key requirements.`
+                : "Analyzing the job spec and extracting key requirements…"}
             </Text>
           </View>
         </View>
@@ -183,35 +142,47 @@ export function JobSpecBreakdownScreen({
           </View>
 
           <View style={styles.requirementsList}>
-            {filteredRequirements.map((req) => (
-              <View key={req.id} style={styles.requirementCard}>
-                <View style={styles.requirementHeader}>
-                  <Text style={styles.requirementTitle}>{req.title}</Text>
+            {requirements.length === 0 ? (
+              <Text style={styles.loadingText}>
+                Fetching requirements this may take a few seconds…
+              </Text>
+            ) : filteredRequirements.length === 0 ? (
+              <Text style={styles.loadingText}>
+                No requirements match this filter.
+              </Text>
+            ) : (
+              filteredRequirements.map((req) => (
+                <View key={req.id} style={styles.requirementCard}>
+                  <View style={styles.requirementHeader}>
+                    <Text style={styles.requirementTitle}>{req.title}</Text>
 
-                  <View
-                    style={[
-                      styles.typeBadge,
-                      req.type === "must-have"
-                        ? styles.mustHaveBadge
-                        : styles.niceToHaveBadge,
-                    ]}
-                  >
-                    <Text
+                    <View
                       style={[
-                        styles.typeBadgeText,
+                        styles.typeBadge,
                         req.type === "must-have"
-                          ? styles.mustHaveText
-                          : styles.niceToHaveText,
+                          ? styles.mustHaveBadge
+                          : styles.niceToHaveBadge,
                       ]}
                     >
-                      {req.type === "must-have" ? "Must-have" : "Nice-to-have"}
-                    </Text>
+                      <Text
+                        style={[
+                          styles.typeBadgeText,
+                          req.type === "must-have"
+                            ? styles.mustHaveText
+                            : styles.niceToHaveText,
+                        ]}
+                      >
+                        {req.type === "must-have"
+                          ? "Must-have"
+                          : "Nice-to-have"}
+                      </Text>
+                    </View>
                   </View>
-                </View>
 
-                <Text style={styles.requirementCategory}>{req.category}</Text>
-              </View>
-            ))}
+                  <Text style={styles.requirementCategory}>{req.category}</Text>
+                </View>
+              ))
+            )}
           </View>
         </View>
       </ScrollView>
@@ -439,5 +410,10 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#6B7280",
+    lineHeight: 20,
   },
 });

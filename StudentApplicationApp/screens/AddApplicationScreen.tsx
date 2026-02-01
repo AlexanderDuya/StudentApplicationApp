@@ -81,29 +81,37 @@ export function AddApplicationScreen({
     return id;
   };
 
+  const MIN_JD_CHARS = 300;
+
   const handleCreate = async () => {
     setError(null);
     setDuplicateWorkspaceId(null);
 
     if (manualMode) {
-      if (!manualJobDescription.trim()) {
+      const trimmedJD = manualJobDescription.trim();
+
+      if (!trimmedJD) {
         setError(
-          "Please paste the job description so we can create your workspace."
+          "Please paste the job description so we can create your workspace.",
         );
         return;
       }
 
-      // TODO: store these properly later
+      if (trimmedJD.length < MIN_JD_CHARS) {
+        setError(
+          `Please paste a fuller job description (at least ${MIN_JD_CHARS} characters).`,
+        );
+        return;
+      }
+
       const id = createWorkspaceAndGo({
         company,
         role,
-        jobDescription: manualJobDescription,
+        jobDescription: trimmedJD,
       });
 
       try {
-        const reqs = await extractRequirementsFromJobDescription(
-          manualJobDescription
-        );
+        const reqs = await extractRequirementsFromJobDescription(trimmedJD);
         updateWorkspace(id, { requirements: reqs });
         console.log("Saved requirements count:", reqs.length, reqs);
       } catch (e) {
@@ -122,7 +130,7 @@ export function AddApplicationScreen({
 
     if (!isValidHttpUrl(trimmed)) {
       setError(
-        "That link doesn’t look valid. Please check it, or paste the job description manually instead."
+        "That link doesn’t look valid. Please check it, or paste the job description manually instead.",
       );
       return;
     }
@@ -140,12 +148,11 @@ export function AddApplicationScreen({
       const ok = await checkUrlReachable(trimmed);
       if (!ok) {
         setError(
-          "We couldn’t access that job link right now. No stress, you can paste the job description manually instead."
+          "We couldn’t access that job link right now. No stress, you can paste the job description manually instead.",
         );
         return;
       }
 
-      // TODO: Later extract requirements from the job link
       const id = createWorkspaceAndGo({
         jobUrl: trimmed,
         company,
@@ -168,16 +175,14 @@ export function AddApplicationScreen({
       }
     } catch {
       setError(
-        "We couldn’t reach that link (it might be blocked or offline). You can paste the job description manually instead."
+        "We couldn’t reach that link (it might be blocked or offline). You can paste the job description manually instead.",
       );
     } finally {
       setIsChecking(false);
     }
   };
 
-  const canSubmit = manualMode
-    ? !!manualJobDescription.trim() && !isChecking
-    : !!jobUrl.trim() && !isChecking;
+  const canSubmit = manualMode ? !isChecking : !!jobUrl.trim() && !isChecking;
 
   return (
     <View style={styles.container}>

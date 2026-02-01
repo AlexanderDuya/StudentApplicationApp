@@ -35,7 +35,7 @@ Respond as JSON with this shape:
           responseMimeType: "application/json",
         },
       }),
-    }
+    },
   );
 
   if (!res.ok) {
@@ -73,7 +73,7 @@ const toCategory = (value: any): string => {
 };
 
 export async function extractRequirementsFromJobDescription(
-  jobDescription: string
+  jobDescription: string,
 ): Promise<Requirement[]> {
   const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) throw new Error("Missing EXPO_PUBLIC_GEMINI_API_KEY");
@@ -101,16 +101,33 @@ CATEGORY DEFINITIONS:
 - Process = ways of workinG, policies, workflows (e.g., Agile, code reviews, testing, documentation, security clearance).
 - Domain = industry/product knowledge (e.g., fintech payments, investment banking).
 
-OUTPUT:
-{
-  "requirements": [
-    { "title": "...", "type": "must-have", "category": "Technical" }
-  ]
-}
-
-JOB DESCRIPTION:
-${jobDescription}
 `.trim();
+
+  const schema = {
+    type: "object",
+    properties: {
+      requirements: {
+        type: "array",
+        minItems: 8,
+        maxItems: 8,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            title: { type: "string" },
+            type: { type: "string", enum: ["must-have", "nice-to-have"] },
+            category: {
+              type: "string",
+              enum: ["Technical", "Soft Skills", "Process", "Domain"],
+            },
+          },
+          required: ["title", "type", "category"],
+        },
+      },
+    },
+    required: ["requirements"],
+    additionalProperties: false,
+  } as const;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
@@ -118,14 +135,24 @@ ${jobDescription}
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `${prompt}\n\nJOB DESCRIPTION:\n${jobDescription}`,
+              },
+            ],
+          },
+        ],
         generationConfig: {
-          temperature: 0.2,
+          temperature: 0,
           maxOutputTokens: 2048,
           responseMimeType: "application/json",
+          responseJsonSchema: schema,
         },
       }),
-    }
+    },
   );
 
   if (!res.ok) {
@@ -134,24 +161,29 @@ ${jobDescription}
   }
 
   const data = await res.json();
+  const candidate = data?.candidates?.[0];
+
   const rawText =
-    data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ??
-    "";
-  console.log("🟣 Gemini JD rawText:", rawText);
+    candidate?.content?.parts
+      ?.map((p: any) => (typeof p.text === "string" ? p.text : ""))
+      .join("") ?? "";
 
-  const parsed = JSON.parse(rawText) as GeminiRequirements;
-  const list = Array.isArray(parsed.requirements) ? parsed.requirements : [];
+  console.log("🟣 Gemini requirements rawText:", rawText);
+  console.log("Finished Reason:", candidate?.finishReason);
 
-  const trimmed = list.slice(0, 8);
-  while (trimmed.length < 8) {
-    trimmed.push({
-      title: "Additional requirement",
-      type: "must-have",
-      category: "Domain",
-    });
+  let parsed: GeminiRequirements;
+  try {
+    parsed = JSON.parse(rawText) as GeminiRequirements;
+  } catch (e) {
+    if (candidate?.finishReason === "MAX_TOKENS") {
+      const shorter = jobDescription.slice(0, 8000);
+      return extractRequirementsFromJobDescription(shorter);
+    }
+    throw new Error(`Failed to parse requirements JSON: ${String(e)}`);
   }
 
-  return trimmed.map((r, idx) => ({
+  const list = Array.isArray(parsed.requirements) ? parsed.requirements : [];
+  return list.slice(0, 8).map((r, idx) => ({
     id: String(idx + 1),
     title: String(r.title ?? "").trim() || "Requirement",
     type: toRequirementType(r.type),

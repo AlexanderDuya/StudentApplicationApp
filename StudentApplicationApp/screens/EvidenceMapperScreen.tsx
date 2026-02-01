@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,9 +8,12 @@ import {
   TextInput,
 } from "react-native";
 import { Screen } from "../App";
+import type { Requirement as ApiRequirement } from "../App";
 
 interface EvidenceMapperScreenProps {
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, applicationId?: string) => void;
+  applicationId: string;
+  requirements: ApiRequirement[];
 }
 
 type Confidence = "high" | "medium" | null;
@@ -22,13 +25,6 @@ type EvidenceInputs = {
   result: string;
 };
 
-type Requirement = {
-  id: string;
-  title: string;
-  hasMapped: boolean;
-  confidence: Confidence;
-};
-
 const emptyEvidence = (): EvidenceInputs => ({
   situation: "",
   task: "",
@@ -38,41 +34,61 @@ const emptyEvidence = (): EvidenceInputs => ({
 
 export function EvidenceMapperScreen({
   onNavigate,
+  requirements,
+  applicationId,
 }: EvidenceMapperScreenProps) {
-  const [expandedReq, setExpandedReq] = useState<string | null>("1");
-
-  const requirements: Requirement[] = [
-    {
-      id: "1",
-      title: "React & JavaScript",
-      hasMapped: true,
-      confidence: "high",
-    },
-    {
-      id: "2",
-      title: "Team collaboration",
-      hasMapped: false,
-      confidence: null,
-    },
-    { id: "3", title: "REST APIs", hasMapped: true, confidence: "medium" },
-    { id: "4", title: "Problem solving", hasMapped: false, confidence: null },
-  ];
+  const [expandedReq, setExpandedReq] = useState<string | null>(
+    requirements[0]?.id ?? null,
+  );
 
   const [evidenceByReq, setEvidenceByReq] = useState<
     Record<string, EvidenceInputs>
-  >({
-    "1": emptyEvidence(),
-    "2": emptyEvidence(),
-    "3": emptyEvidence(),
-    "4": emptyEvidence(),
+  >(() => {
+    const initial: Record<string, EvidenceInputs> = {};
+    for (const r of requirements) initial[r.id] = emptyEvidence();
+    return initial;
   });
 
-  const mappedCount = useMemo(
-    () => requirements.filter((r) => r.hasMapped).length,
-    [requirements],
-  );
+  useEffect(() => {
+    setEvidenceByReq((prev) => {
+      const next = { ...prev };
+      for (const r of requirements) {
+        if (!next[r.id]) next[r.id] = emptyEvidence();
+      }
+      return next;
+    });
+
+    setExpandedReq((cur) => cur ?? requirements[0]?.id ?? null);
+  }, [requirements]);
+
+  const isMapped = (ev: EvidenceInputs) =>
+    !!(
+      ev.situation.trim() ||
+      ev.task.trim() ||
+      ev.action.trim() ||
+      ev.result.trim()
+    );
+
+  const getConfidence = (ev: EvidenceInputs): Confidence => {
+    if (!isMapped(ev)) return null;
+    const filled =
+      Number(!!ev.situation.trim()) +
+      Number(!!ev.task.trim()) +
+      Number(!!ev.action.trim()) +
+      Number(!!ev.result.trim());
+    return filled >= 4 ? "high" : "medium";
+  };
+
+  const mappedCount = useMemo(() => {
+    return requirements.filter((r) =>
+      isMapped(evidenceByReq[r.id] ?? emptyEvidence()),
+    ).length;
+  }, [requirements, evidenceByReq]);
+
   const totalCount = requirements.length;
-  const progressPct = Math.round((mappedCount / totalCount) * 100);
+  const progressPct = totalCount
+    ? Math.round((mappedCount / totalCount) * 100)
+    : 0;
 
   const getConfidenceStyle = (confidence: Confidence) => {
     if (confidence === "high") return { bg: "#DCFCE7", text: "#166534" };
@@ -93,12 +109,13 @@ export function EvidenceMapperScreen({
       },
     }));
   };
+  console.log("Evidence mapper requirements:", requirements);
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => onNavigate("workspace-overview")}
+          onPress={() => onNavigate("workspace-overview", applicationId)}
           style={styles.backButton}
         >
           <Text style={styles.backIcon}>←</Text>
@@ -146,6 +163,8 @@ export function EvidenceMapperScreen({
           {requirements.map((req) => {
             const isExpanded = expandedReq === req.id;
             const ev = evidenceByReq[req.id] ?? emptyEvidence();
+            const mapped = isMapped(ev);
+            const confidence = getConfidence(ev);
 
             return (
               <View key={req.id} style={styles.requirementCard}>
@@ -154,32 +173,71 @@ export function EvidenceMapperScreen({
                   style={styles.requirementHeader}
                 >
                   <Text style={styles.requirementIcon}>
-                    {req.hasMapped ? "✅" : "⭕"}
+                    {mapped ? "✅" : "⭕"}
                   </Text>
 
                   <View style={styles.requirementInfo}>
                     <Text style={styles.requirementTitle}>{req.title}</Text>
 
-                    {req.hasMapped && req.confidence && (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, color: "#6B7280" }}>
+                        {req.category}
+                      </Text>
+
                       <View
                         style={[
-                          styles.confidenceBadge,
-                          {
-                            backgroundColor: getConfidenceStyle(req.confidence)
-                              .bg,
-                          },
+                          styles.typeBadge,
+                          req.type === "must-have"
+                            ? styles.mustHaveBadge
+                            : styles.niceToHaveBadge,
                         ]}
                       >
                         <Text
                           style={[
-                            styles.confidenceText,
-                            { color: getConfidenceStyle(req.confidence).text },
+                            styles.typeBadgeText,
+                            req.type === "must-have"
+                              ? styles.mustHaveText
+                              : styles.niceToHaveText,
                           ]}
                         >
-                          {req.confidence} confidence
+                          {req.type === "must-have"
+                            ? "Must-have"
+                            : "Nice-to-have"}
                         </Text>
                       </View>
-                    )}
+                    </View>
+
+                    <View
+                      style={[
+                        styles.confidenceBadge,
+                        {
+                          backgroundColor: confidence
+                            ? getConfidenceStyle(confidence).bg
+                            : "#F3F4F6",
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.confidenceText,
+                          {
+                            color: confidence
+                              ? getConfidenceStyle(confidence).text
+                              : "#6B7280",
+                          },
+                        ]}
+                      >
+                        {confidence
+                          ? `${confidence} confidence`
+                          : "Not started"}
+                      </Text>
+                    </View>
                   </View>
 
                   <Text style={styles.expandIcon}>
@@ -388,4 +446,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  mustHaveBadge: {
+    backgroundColor: "#FEE2E2",
+  },
+  niceToHaveBadge: {
+    backgroundColor: "#DBEAFE",
+  },
+  typeBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  mustHaveText: {
+    color: "#991B1B",
+  },
+  niceToHaveText: {
+    color: "#1E40AF",
+  },
 });

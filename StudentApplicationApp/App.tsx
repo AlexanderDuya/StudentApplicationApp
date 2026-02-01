@@ -61,7 +61,7 @@ export default function App() {
 
   const updateWorkspace = (id: string, patch: Partial<Workspace>) => {
     setWorkspaces((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, ...patch } : w))
+      prev.map((w) => (w.id === id ? { ...w, ...patch } : w)),
     );
   };
   const goJobSpec = () => {
@@ -106,7 +106,7 @@ export default function App() {
 
     void AsyncStorage.setItem(
       WORKSPACES_STORAGE_KEY,
-      JSON.stringify(workspaces)
+      JSON.stringify(workspaces),
     );
 
     console.log("Saved workspaces:", workspaces.length);
@@ -114,7 +114,7 @@ export default function App() {
   const findWorkspaceIdByJobUrl = (jobUrl: string) => {
     const target = normalizeJobUrl(jobUrl);
     const found = workspaces.find(
-      (w) => w.jobUrl && normalizeJobUrl(w.jobUrl) === target
+      (w) => w.jobUrl && normalizeJobUrl(w.jobUrl) === target,
     );
     return found?.id ?? null;
   };
@@ -224,8 +224,22 @@ export default function App() {
           />
         );
       }
-      case "evidence-mapper":
-        return <EvidenceMapperScreen onNavigate={navigate} />;
+      case "evidence-mapper": {
+        if (!selectedApplicationId) {
+          return <HomeScreen onNavigate={navigate} />;
+        }
+
+        const ws = workspaces.find((w) => w.id === selectedApplicationId);
+
+        return (
+          <EvidenceMapperScreen
+            onNavigate={navigate}
+            applicationId={selectedApplicationId}
+            requirements={ws?.requirements ?? []}
+          />
+        );
+      }
+
       case "tailor-cv":
         return <TailorCVScreen onNavigate={navigate} />;
       default:

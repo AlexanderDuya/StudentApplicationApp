@@ -145,6 +145,28 @@ export default function App() {
     return id;
   };
 
+  const clearAllApplications = async () => {
+    try {
+      const checklistKeys = workspaces.map(
+        (w) => `workspace:${w.id}:checklistSteps`,
+      );
+
+      await AsyncStorage.multiRemove([
+        WORKSPACES_STORAGE_KEY,
+        LAST_WORKSPACE_ID_KEY,
+        ...checklistKeys,
+      ]);
+
+      console.log("Cleared all applications and checklist progress");
+    } catch (e) {
+      console.log("Clear error:", e);
+    } finally {
+      setWorkspaces([]);
+      setSelectedApplicationId(null);
+      setCurrentScreen("home");
+    }
+  };
+
   const navigate = (screen: Screen, applicationId?: string) => {
     setCurrentScreen(screen);
 
@@ -162,7 +184,13 @@ export default function App() {
   const renderScreen = () => {
     switch (currentScreen) {
       case "home":
-        return <HomeScreen onNavigate={navigate} />;
+        return (
+          <HomeScreen
+            onNavigate={navigate}
+            workspaces={workspaces}
+            onClearAll={clearAllApplications}
+          />
+        );
 
       case "add-application":
         return (
@@ -226,7 +254,13 @@ export default function App() {
       }
       case "evidence-mapper": {
         if (!selectedApplicationId) {
-          return <HomeScreen onNavigate={navigate} />;
+          return (
+            <HomeScreen
+              onNavigate={navigate}
+              workspaces={workspaces}
+              onClearAll={clearAllApplications}
+            />
+          );
         }
 
         const ws = workspaces.find((w) => w.id === selectedApplicationId);
@@ -243,7 +277,13 @@ export default function App() {
       case "tailor-cv":
         return <TailorCVScreen onNavigate={navigate} />;
       default:
-        return <HomeScreen onNavigate={navigate} />;
+        return (
+          <HomeScreen
+            onNavigate={navigate}
+            workspaces={workspaces}
+            onClearAll={clearAllApplications}
+          />
+        );
     }
   };
 

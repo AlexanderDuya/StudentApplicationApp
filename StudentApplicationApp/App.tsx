@@ -278,8 +278,30 @@ export default function App() {
         );
       }
 
-      case "tailor-cv":
-        return <TailorCVScreen onNavigate={navigate} />;
+      case "tailor-cv": {
+        if (!selectedApplicationId) {
+          return (
+            <HomeScreen
+              onNavigate={navigate}
+              workspaces={workspaces}
+              onClearAll={clearAllApplications}
+            />
+          );
+        }
+
+        const ws = workspaces.find((w) => w.id === selectedApplicationId);
+
+        return (
+          <TailorCVScreen
+            onNavigate={navigate}
+            applicationId={selectedApplicationId}
+            company={ws?.company ?? ""}
+            role={ws?.role ?? ""}
+            jobDescription={ws?.jobDescription}
+          />
+        );
+      }
+
       default:
         return (
           <HomeScreen

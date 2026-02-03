@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,11 +6,18 @@ import {
   ScrollView,
   TextInput,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { Screen } from "../App";
+import { analyseCvBullet } from "../lib/gemini";
 
 interface TailorCVScreenProps {
-  onNavigate: (screen: Screen) => void;
+  onNavigate: (screen: Screen, applicationId?: string) => void;
+
+  applicationId: string;
+  company: string;
+  role: string;
+  jobDescription?: string;
 }
 
 type Bullet = {
@@ -20,20 +27,43 @@ type Bullet = {
 
 const newId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-export function TailorCVScreen({ onNavigate }: TailorCVScreenProps) {
+export function TailorCVScreen({
+  onNavigate,
+  applicationId,
+  company,
+  role,
+  jobDescription,
+}: TailorCVScreenProps) {
   const [bullets, setBullets] = useState<Bullet[]>([{ id: newId(), text: "" }]);
   const [activeId, setActiveId] = useState<string>(bullets[0].id);
+
+  const [coachTips, setCoachTips] = useState<string[]>([]);
+  const [coachLoading, setCoachLoading] = useState(false);
+  const [coachError, setCoachError] = useState<string | null>(null);
+
+  const activeBullet = useMemo(
+    () => bullets.find((b) => b.id === activeId),
+    [bullets, activeId],
+  );
 
   const updateBullet = (id: string, value: string) => {
     setBullets((prev) =>
       prev.map((b) => (b.id === id ? { ...b, text: value } : b)),
     );
+
+    if (id === activeId) {
+      setCoachTips([]);
+      setCoachError(null);
+    }
   };
 
   const addBullet = () => {
     const id = newId();
     setBullets((prev) => [...prev, { id, text: "" }]);
     setActiveId(id);
+
+    setCoachTips([]);
+    setCoachError(null);
   };
 
   const removeBullet = (id: string) => {
@@ -41,7 +71,12 @@ export function TailorCVScreen({ onNavigate }: TailorCVScreenProps) {
       const next = prev.filter((b) => b.id !== id);
       const safeNext = next.length ? next : [{ id: newId(), text: "" }];
 
-      if (id === activeId) setActiveId(safeNext[0].id);
+      if (id === activeId) {
+        setActiveId(safeNext[0].id);
+        setCoachTips([]);
+        setCoachError(null);
+      }
+
       return safeNext;
     });
   };
@@ -59,14 +94,54 @@ export function TailorCVScreen({ onNavigate }: TailorCVScreenProps) {
       );
     }
 
-    return "Write a tailored bullet from your mapped evidence (include skill keywords + a measurable outcome)…";
+    return "Write a tailored bullet from your evidence (include skill keywords + a measurable outcome)…";
+  };
+
+  const handleAnalyse = async () => {
+    setCoachError(null);
+    setCoachTips([]);
+
+    const bulletText = activeBullet?.text?.trim() ?? "";
+    if (!bulletText) {
+      setCoachError(
+        "Write something in the active bullet first, then analyse.",
+      );
+      return;
+    }
+
+    if (!company?.trim() || !role?.trim()) {
+      setCoachError(
+        "Missing company/role. Go back and make sure they’re saved.",
+      );
+      return;
+    }
+
+    setCoachLoading(true);
+    try {
+      const tips = await analyseCvBullet({
+        bullet: bulletText,
+        company: company.trim(),
+        role: role.trim(),
+        jobDescription,
+      });
+
+      if (!tips.length) {
+        setCoachError("No suggestions returned. Try adding a bit more detail.");
+      } else {
+        setCoachTips(tips);
+      }
+    } catch (e: any) {
+      setCoachError(e?.message ?? "Something went wrong analysing the bullet.");
+    } finally {
+      setCoachLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => onNavigate("evidence-mapper")}
+          onPress={() => onNavigate("workspace-overview", applicationId)}
           style={styles.backButton}
         >
           <Text style={styles.backIcon}>←</Text>
@@ -75,7 +150,7 @@ export function TailorCVScreen({ onNavigate }: TailorCVScreenProps) {
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>Tailor CV Bullets</Text>
           <Text style={styles.headerSubtitle}>
-            Refine mapped evidence into role + company aligned CV bullets
+            {company} • {role}
           </Text>
         </View>
       </View>
@@ -156,56 +231,57 @@ export function TailorCVScreen({ onNavigate }: TailorCVScreenProps) {
             <View style={styles.feedbackIcon}>
               <Text style={styles.feedbackIconText}>💡</Text>
             </View>
-            <Text style={styles.feedbackTitle}>Coach feedback</Text>
+
+            <View style={{ flex: 1 }}>
+              <Text style={styles.feedbackTitle}>Coach feedback (AI)</Text>
+              <Text style={styles.feedbackSubtitle}>
+                Our Coach AI analyses your bullet and suggests improvements
+                based on the job description!
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleAnalyse}
+              disabled={coachLoading}
+              style={[styles.analyseButton, coachLoading && { opacity: 0.6 }]}
+            >
+              <Text style={styles.analyseButtonText}>
+                {coachLoading ? "Analysing..." : "Analyse"}
+              </Text>
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.feedbackList}>
-            <View style={styles.feedbackItem}>
-              <Text style={styles.feedbackCheckIcon}>✅</Text>
-              <View style={styles.feedbackContent}>
-                <Text style={styles.feedbackItemTitle}>
-                  Tailoring checklist
-                </Text>
-                <Text style={styles.feedbackItemText}>
-                  Start from one mapped requirement but with the role/company
-                  keywords.
-                </Text>
-              </View>
+          {coachLoading && (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator />
+              <Text style={styles.loadingText}>Getting suggestions…</Text>
             </View>
+          )}
 
-            <View style={styles.feedbackItem}>
-              <Text style={styles.feedbackTrendIcon}>🎯</Text>
-              <View style={styles.feedbackContent}>
-                <Text style={styles.feedbackItemTitlePurple}>
-                  Make it role-specific
-                </Text>
-                <Text style={styles.feedbackItemTextPurple}>
-                  Use keywords from the job description (e.g., scale,
-                  reliability, performance, collaboration) and mention the
-                  relevant tools.
-                </Text>
-              </View>
-            </View>
+          {!!coachError && <Text style={styles.errorText}>{coachError}</Text>}
 
-            <View style={styles.feedbackItem}>
-              <Text style={styles.feedbackTrendIcon}>📈</Text>
-              <View style={styles.feedbackContent}>
-                <Text style={styles.feedbackItemTitlePurple}>
-                  Add measurable impact
-                </Text>
-                <Text style={styles.feedbackItemTextPurple}>
-                  Use metrics where possible: users, %, time saved, latency
-                  reduced, grades, bugs fixed.
-                </Text>
-              </View>
+          {!coachLoading && !coachError && coachTips.length === 0 && (
+            <Text style={styles.emptyCoachText}>
+              Press Analyse to get 4 suggestions tailored to this role.
+            </Text>
+          )}
+
+          {!coachLoading && coachTips.length > 0 && (
+            <View style={styles.tipsList}>
+              {coachTips.map((tip, idx) => (
+                <View key={`${idx}-${tip}`} style={styles.tipItem}>
+                  <Text style={styles.tipBullet}>•</Text>
+                  <Text style={styles.tipText}>{tip}</Text>
+                </View>
+              ))}
             </View>
-          </View>
+          )}
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
         <TouchableOpacity
-          onPress={() => onNavigate("workspace-overview")}
+          onPress={() => onNavigate("workspace-overview", applicationId)}
           style={styles.saveButton}
         >
           <Text style={styles.saveButtonText}>Save and continue</Text>
@@ -323,6 +399,7 @@ const styles = StyleSheet.create({
   charCount: { fontSize: 12, color: "#6B7280" },
   hintMini: { fontSize: 12, color: "#6B7280" },
 
+  // Feedback
   feedbackCard: {
     marginHorizontal: 24,
     marginBottom: 24,
@@ -335,8 +412,8 @@ const styles = StyleSheet.create({
   feedbackHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 12,
   },
   feedbackIcon: {
     width: 32,
@@ -348,23 +425,27 @@ const styles = StyleSheet.create({
   },
   feedbackIconText: { fontSize: 16 },
   feedbackTitle: { fontSize: 16, color: "#581C87" },
+  feedbackSubtitle: { fontSize: 12, color: "#7C3AED", marginTop: 2 },
 
-  feedbackList: { gap: 12 },
-  feedbackItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
+  analyseButton: {
+    backgroundColor: "#14B8A6",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
   },
-  feedbackCheckIcon: { fontSize: 20, marginTop: 2 },
-  feedbackTrendIcon: { fontSize: 20, marginTop: 2 },
-  feedbackContent: { flex: 1 },
-  feedbackItemTitle: { fontSize: 14, color: "#111827", marginBottom: 4 },
-  feedbackItemTitlePurple: { fontSize: 14, color: "#581C87", marginBottom: 4 },
-  feedbackItemText: { fontSize: 12, color: "#6B7280", lineHeight: 16 },
-  feedbackItemTextPurple: { fontSize: 12, color: "#7C3AED", lineHeight: 16 },
+  analyseButtonText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
+
+  loadingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  loadingText: { fontSize: 12, color: "#6B7280" },
+
+  errorText: { color: "#DC2626", fontSize: 12, lineHeight: 16 },
+
+  emptyCoachText: { fontSize: 12, color: "#6B7280", lineHeight: 16 },
+
+  tipsList: { gap: 10, marginTop: 8 },
+  tipItem: { flexDirection: "row", gap: 8 },
+  tipBullet: { color: "#581C87", fontSize: 16, marginTop: -1 },
+  tipText: { flex: 1, fontSize: 12, color: "#6B7280", lineHeight: 16 },
 
   footer: {
     paddingHorizontal: 24,

@@ -2,8 +2,8 @@ type GeminiJobDesc = { jobDescription: string };
 import type { Requirement, RequirementType } from "../App";
 
 const MODEL = "gemini-2.5-flash";
-// used from the gemini documentation to retrieve job descriptions from url, later i need to be able to extract requirements from descritpion
-// only downside is that there is a maximum of 20 limit per day
+const MODEL2 = "gemini-2.5-flash-lite";
+// only downside is that there is a maximum of 20 limit per day hence why I am using 2 models
 
 export async function extractJobDescriptionFromUrl(jobUrl: string) {
   const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
@@ -189,4 +189,86 @@ CATEGORY DEFINITIONS:
     type: toRequirementType(r.type),
     category: toCategory(r.category),
   }));
+}
+
+export async function analyseCvBullet(args: {
+  bullet: string;
+  company: string;
+  role: string;
+  jobDescription?: string;
+}): Promise<string[]> {
+  const apiKey = process.env.EXPO_PUBLIC_GEMINI_FEEDBACK_API_KEY;
+
+  if (!apiKey) throw new Error("Missing EXPO_PUBLIC_GEMINI_FEEDBACK_API_KEY");
+
+  const bullet = args.bullet.trim();
+  if (!bullet) return [];
+
+  const company = (args.company || "").trim();
+  const role = (args.role || "").trim();
+
+  const prompt = `
+You are an expert CV coach for ${company}.
+
+TARGET ROLE: ${role}
+
+JOB DESCRIPTION (use this as the source for keywords and expectations):
+${args.jobDescription}
+
+USER CV BULLET:
+${bullet}
+
+TASK:
+Give EXACTLY 4 improvements to the bullet that make it match THIS role better.
+
+OUTPUT FORMAT (VERY IMPORTANT):
+- Output EXACTLY 4 lines.
+- Each line MUST follow this structure: "Suggestion: <what to add/adjust>. Why: <MUST say why it's relevant to the company and role, and MUST INCLUDE the companies NAME or ROLE as part of the reason> ."
+- Each line must reference AT LEAST ONE job related keyword/tool/skill from the job description (or an exact responsibility).
+- Do NOT rewrite the full bullet.
+- Do NOT mention "job description says" or quote long text.
+- Keep suggestion point under 30 words
+- Do not include "-" before each suggestion.
+
+Return ONLY the 4 lines and nothing else.
+`.trim();
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL2}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 2048,
+        },
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini error ${MODEL2} ${res.status}: ${err}`);
+  }
+
+  const data = await res.json();
+  const rawText =
+    data?.candidates?.[0]?.content?.parts
+      ?.map((p: any) => (typeof p.text === "string" ? p.text : ""))
+      .join("") ?? "";
+
+  console.log("🟣 Gemini CV coach rawText:", rawText);
+  const cleaned = rawText.trim();
+  if (!cleaned) return [];
+
+  const rawLines = cleaned.split("\n");
+
+  const lines: string[] = [];
+  for (const line of rawLines) {
+    const trimmed = line.trim();
+    if (trimmed !== "") lines.push(trimmed);
+  }
+  return lines.slice(0, 4);
 }

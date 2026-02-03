@@ -202,8 +202,7 @@ export default function App() {
           />
         );
 
-      case "workspace-overview":
-        // If somehow user lands here without an id, send them to Add
+      case "workspace-overview": {
         if (!selectedApplicationId) {
           return (
             <AddApplicationScreen
@@ -215,12 +214,17 @@ export default function App() {
           );
         }
 
+        const ws = workspaces.find((w) => w.id === selectedApplicationId);
+
         return (
           <WorkspaceOverviewScreen
             onNavigate={navigate}
             applicationId={selectedApplicationId}
+            company={ws?.company}
+            role={ws?.role}
           />
         );
+      }
 
       case "job-spec-breakdown": {
         const ws = selectedApplicationId

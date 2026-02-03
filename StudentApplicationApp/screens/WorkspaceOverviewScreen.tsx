@@ -12,6 +12,8 @@ import {
 export interface WorkspaceOverviewScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
   applicationId: string;
+  company?: string;
+  role?: string;
 }
 
 type FutureScreen =
@@ -87,8 +89,13 @@ const BASE_STEPS: Step[] = [
 export function WorkspaceOverviewScreen({
   onNavigate,
   applicationId,
+  company,
+  role,
 }: WorkspaceOverviewScreenProps) {
   const [steps, setSteps] = useState<Step[]>(BASE_STEPS);
+
+  const displayCompany = company?.trim() || "Company not set";
+  const displayRole = role?.trim() || "Role not set";
 
   useEffect(() => {
     let cancelled = false;
@@ -114,10 +121,12 @@ export function WorkspaceOverviewScreen({
             completed: saved[String(s.id)] ?? s.completed,
           })),
         );
-      } catch {}
+      } catch {
+        // ignore load errors for now
+      }
     };
 
-    load();
+    void load();
 
     return () => {
       cancelled = true;
@@ -179,15 +188,6 @@ export function WorkspaceOverviewScreen({
 
   const filledStrengthBars = Math.ceil(strengthPercentage / 20);
 
-  const canNavigate = (screen: StepScreen): screen is Screen => {
-    return (
-      screen === "home" ||
-      screen === "add-application" ||
-      screen === "workspace-overview" ||
-      screen === "job-spec-breakdown"
-    );
-  };
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -202,16 +202,11 @@ export function WorkspaceOverviewScreen({
           </TouchableOpacity>
 
           <View style={styles.headerInfo}>
-            <Text style={styles.companyName}>Google</Text>
-            <Text style={styles.roleName}>Software Engineer Intern</Text>
+            <Text style={styles.companyName}>{displayCompany}</Text>
+            <Text style={styles.roleName}>{displayRole}</Text>
 
             <Text style={styles.workspaceId}>
-              Workspace ID:{" "}
-              {
-                // To be aware if same workspace currently being used
-
-                applicationId
-              }
+              Workspace ID: {applicationId}
             </Text>
           </View>
         </View>
@@ -278,8 +273,7 @@ export function WorkspaceOverviewScreen({
         <View style={styles.strengthInfo}>
           <Text style={styles.strengthInfoIcon}>ℹ️</Text>
           <Text style={styles.strengthInfoText}>
-            Your score improved by 15 points after mapping evidence to
-            requirements!
+            Your score improves as you complete checklist steps.
           </Text>
         </View>
       </View>
@@ -332,7 +326,7 @@ export function WorkspaceOverviewScreen({
           </Text>
 
           <TouchableOpacity
-            onPress={() => onNavigate("job-spec-breakdown")}
+            onPress={() => onNavigate("job-spec-breakdown", applicationId)}
             style={styles.suggestionButton}
           >
             <Text style={styles.suggestionButtonText}>Go to job spec</Text>

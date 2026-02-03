@@ -87,6 +87,19 @@ export function AddApplicationScreen({
     setError(null);
     setDuplicateWorkspaceId(null);
 
+    const trimmedCompany = company.trim();
+    const trimmedRole = role.trim();
+
+    if (!trimmedCompany) {
+      setError("Please enter a company name to continue.");
+      return;
+    }
+
+    if (!trimmedRole) {
+      setError("Please enter a role name to continue.");
+      return;
+    }
+
     if (manualMode) {
       const trimmedJD = manualJobDescription.trim();
 
@@ -105,8 +118,8 @@ export function AddApplicationScreen({
       }
 
       const id = createWorkspaceAndGo({
-        company,
-        role,
+        company: trimmedCompany,
+        role: trimmedRole,
         jobDescription: trimmedJD,
       });
 
@@ -155,8 +168,8 @@ export function AddApplicationScreen({
 
       const id = createWorkspaceAndGo({
         jobUrl: trimmed,
-        company,
-        role,
+        company: trimmedCompany,
+        role: trimmedRole,
       });
 
       try {
@@ -182,7 +195,11 @@ export function AddApplicationScreen({
     }
   };
 
-  const canSubmit = manualMode ? !isChecking : !!jobUrl.trim() && !isChecking;
+  const canSubmit =
+    !isChecking &&
+    !!company.trim() &&
+    !!role.trim() &&
+    (manualMode ? !!manualJobDescription.trim() : !!jobUrl.trim());
 
   return (
     <View style={styles.container}>
@@ -302,13 +319,16 @@ export function AddApplicationScreen({
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
-              Company name <Text style={styles.optional}>(optional)</Text>
+              Company name <Text style={styles.required}>*</Text>
             </Text>
             <View style={styles.inputContainer}>
               <Text style={styles.inputIcon}>🏢</Text>
               <TextInput
                 value={company}
-                onChangeText={setCompany}
+                onChangeText={(v) => {
+                  setCompany(v);
+                  if (error) setError(null);
+                }}
                 placeholder="e.g. Google, Microsoft, Amazon"
                 placeholderTextColor="#9CA3AF"
                 style={styles.input}
@@ -318,13 +338,16 @@ export function AddApplicationScreen({
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>
-              Role name <Text style={styles.optional}>(optional)</Text>
+              Role name <Text style={styles.required}>*</Text>
             </Text>
             <View style={styles.inputContainer}>
               <Text style={styles.inputIcon}>💼</Text>
               <TextInput
                 value={role}
-                onChangeText={setRole}
+                onChangeText={(v) => {
+                  setRole(v);
+                  if (error) setError(null);
+                }}
                 placeholder="e.g. Software Engineer Intern"
                 placeholderTextColor="#9CA3AF"
                 style={styles.input}
@@ -407,7 +430,6 @@ const styles = StyleSheet.create({
   inputGroup: { marginBottom: 24 },
   label: { fontSize: 14, color: "#374151", marginBottom: 8 },
   required: { color: "#EF4444" },
-  optional: { color: "#9CA3AF" },
 
   inputContainer: {
     flexDirection: "row",

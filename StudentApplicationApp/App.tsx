@@ -16,6 +16,8 @@ import { JobSpecBreakdownScreen } from "./screens/JobSpecBreakdownScreen";
 import { JobSpecDescriptionScreen } from "./screens/JobSpecDescriptionScreen";
 import { EvidenceMapperScreen } from "./screens/EvidenceMapperScreen";
 import { TailorCVScreen } from "./screens/TailorCVScreen";
+import { TailorCoverLetterScreen } from "./screens/TailorCLScreen";
+import { CompanyResearchScreen } from "./screens/CompanyResearchScreen";
 
 export type Screen =
   | "home"
@@ -24,7 +26,9 @@ export type Screen =
   | "job-spec-breakdown"
   | "job-spec-description"
   | "evidence-mapper"
-  | "tailor-cv";
+  | "tailor-cv"
+  | "tailor-cover-letter"
+  | "company-research";
 
 export type RequirementType = "must-have" | "nice-to-have";
 
@@ -42,7 +46,15 @@ export type Workspace = {
   role?: string;
   jobDescription?: string;
   requirements?: Requirement[];
+  companyResearch?: CompanyResearchNotes;
   createdAt: number;
+};
+
+export type CompanyResearchNotes = {
+  whatDoesCompanyDo?: string;
+  recentNews?: string;
+  cultureValues?: string;
+  whyWorkHere?: string;
 };
 
 const normalizeJobUrl = (url: string) => url.trim().toLowerCase();
@@ -61,7 +73,7 @@ export default function App() {
 
   const updateWorkspace = (id: string, patch: Partial<Workspace>) => {
     setWorkspaces((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, ...patch } : w)),
+      prev.map((w) => (w.id === id ? { ...w, ...patch } : w))
     );
   };
   const goJobSpec = () => {
@@ -106,7 +118,7 @@ export default function App() {
 
     void AsyncStorage.setItem(
       WORKSPACES_STORAGE_KEY,
-      JSON.stringify(workspaces),
+      JSON.stringify(workspaces)
     );
 
     console.log("Saved workspaces:", workspaces.length);
@@ -114,7 +126,7 @@ export default function App() {
   const findWorkspaceIdByJobUrl = (jobUrl: string) => {
     const target = normalizeJobUrl(jobUrl);
     const found = workspaces.find(
-      (w) => w.jobUrl && normalizeJobUrl(w.jobUrl) === target,
+      (w) => w.jobUrl && normalizeJobUrl(w.jobUrl) === target
     );
     return found?.id ?? null;
   };
@@ -148,7 +160,7 @@ export default function App() {
   const clearAllApplications = async () => {
     try {
       const checklistKeys = workspaces.map(
-        (w) => `workspace:${w.id}:checklistSteps`,
+        (w) => `workspace:${w.id}:checklistSteps`
       );
 
       await AsyncStorage.multiRemove([
@@ -293,6 +305,54 @@ export default function App() {
 
         return (
           <TailorCVScreen
+            onNavigate={navigate}
+            applicationId={selectedApplicationId}
+            company={ws?.company ?? ""}
+            role={ws?.role ?? ""}
+            jobDescription={ws?.jobDescription}
+          />
+        );
+      }
+      case "company-research": {
+        if (!selectedApplicationId) {
+          return (
+            <HomeScreen
+              onNavigate={navigate}
+              workspaces={workspaces}
+              onClearAll={clearAllApplications}
+            />
+          );
+        }
+
+        const ws = workspaces.find((w) => w.id === selectedApplicationId);
+
+        return (
+          <CompanyResearchScreen
+            onNavigate={navigate}
+            applicationId={selectedApplicationId}
+            company={ws?.company ?? ""}
+            role={ws?.role ?? ""}
+            initialNotes={ws?.companyResearch}
+            updateWorkspace={updateWorkspace}
+          />
+        );
+      }
+
+      case "tailor-cover-letter": {
+        if (!selectedApplicationId) {
+          return (
+            <HomeScreen
+              onNavigate={navigate}
+              workspaces={workspaces}
+              onClearAll={clearAllApplications}
+            />
+          );
+        }
+
+        const ws = workspaces.find((w) => w.id === selectedApplicationId);
+
+        return (
+          <TailorCoverLetterScreen
             onNavigate={navigate}
             applicationId={selectedApplicationId}
             company={ws?.company ?? ""}

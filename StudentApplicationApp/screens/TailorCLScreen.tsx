@@ -8,104 +8,39 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { Screen } from "../App";
-import { analyseCvBullet } from "../lib/gemini";
+import type { Screen } from "../App";
 
-interface TailorCVScreenProps {
+interface TailorCoverLetterScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
-
   applicationId: string;
   company: string;
   role: string;
   jobDescription?: string;
 }
 
-type Bullet = {
-  id: string;
-  text: string;
-};
-
-const newId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-export function TailorCVScreen({
+export function TailorCoverLetterScreen({
   onNavigate,
   applicationId,
   company,
   role,
   jobDescription,
-}: TailorCVScreenProps) {
-  const [bullets, setBullets] = useState<Bullet[]>([{ id: newId(), text: "" }]);
-  const [activeId, setActiveId] = useState<string>(bullets[0].id);
+}: TailorCoverLetterScreenProps) {
+  const [coverLetter, setCoverLetter] = useState("");
+  const [active, setActive] = useState(true);
 
   const [coachTips, setCoachTips] = useState<string[]>([]);
   const [coachLoading, setCoachLoading] = useState(false);
   const [coachError, setCoachError] = useState<string | null>(null);
 
-  const activeBullet = useMemo(
-    () => bullets.find((b) => b.id === activeId),
-    [bullets, activeId]
-  );
-
-  const updateBullet = (id: string, value: string) => {
-    setBullets((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, text: value } : b))
-    );
-
-    if (id === activeId) {
-      setCoachTips([]);
-      setCoachError(null);
-    }
-  };
-
-  const addBullet = () => {
-    const id = newId();
-    setBullets((prev) => [...prev, { id, text: "" }]);
-    setActiveId(id);
-
-    setCoachTips([]);
-    setCoachError(null);
-  };
-
-  const removeBullet = (id: string) => {
-    setBullets((prev) => {
-      const next = prev.filter((b) => b.id !== id);
-      const safeNext = next.length ? next : [{ id: newId(), text: "" }];
-
-      if (id === activeId) {
-        setActiveId(safeNext[0].id);
-        setCoachTips([]);
-        setCoachError(null);
-      }
-
-      return safeNext;
-    });
-  };
-
-  const placeholderForIndex = (idx: number) => {
-    if (idx === 0) {
-      return (
-        "Example (STAR → tailored for Google SWE Intern):\n" +
-        "Situation: Built a React task app for coursework used by classmates.\n" +
-        "Task: Create a responsive UI with real-time updates.\n" +
-        "Action: Implemented reusable components + state management; optimized renders.\n" +
-        "Result: 50+ users, 95% grade, faster interactions.\n\n" +
-        "Tailored CV bullet:\n" +
-        "• Built a scalable React UI with reusable components and optimized rendering, delivering real-time updates for 50+ users and improving responsiveness; collaborated with peers to iterate quickly and achieved a 95% project grade."
-      );
-    }
-
-    return "Write a tailored bullet from your evidence (include skill keywords + a measurable outcome)…";
-  };
+  const charCount = useMemo(() => coverLetter.length, [coverLetter]);
 
   const handleAnalyse = async () => {
     setCoachError(null);
     setCoachTips([]);
 
-    const bulletText = activeBullet?.text?.trim() ?? "";
-    if (!bulletText) {
-      setCoachError(
-        "Write something in the active bullet first, then analyse."
-      );
+    const text = coverLetter.trim();
+    if (!text) {
+      setCoachError("Write your cover letter first, then analyse.");
       return;
     }
 
@@ -117,24 +52,6 @@ export function TailorCVScreen({
     }
 
     setCoachLoading(true);
-    try {
-      const tips = await analyseCvBullet({
-        bullet: bulletText,
-        company: company.trim(),
-        role: role.trim(),
-        jobDescription,
-      });
-
-      if (!tips.length) {
-        setCoachError("No suggestions returned. Try adding a bit more detail.");
-      } else {
-        setCoachTips(tips);
-      }
-    } catch (e: any) {
-      setCoachError(e?.message ?? "Something went wrong analysing the bullet.");
-    } finally {
-      setCoachLoading(false);
-    }
   };
 
   return (
@@ -148,84 +65,60 @@ export function TailorCVScreen({
         </TouchableOpacity>
 
         <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>Tailor CV Bullets</Text>
+          <Text style={styles.headerTitle}>Tailor Cover Letter</Text>
           <Text style={styles.headerSubtitle}>
             {company} • {role}
           </Text>
         </View>
       </View>
 
+      {/* Notice */}
       <View style={styles.noticeCard}>
-        <Text style={styles.noticeIcon}>🎯</Text>
+        <Text style={styles.noticeIcon}>✍️</Text>
         <Text style={styles.noticeText}>
-          You’ve mapped your experience to the requirements. Now rewrite that
-          evidence in a way that matches the
-          <Text style={styles.noticeBold}> role, company, and keywords.</Text>
+          Write a cover letter that matches the{" "}
+          <Text style={styles.noticeBold}>role, company, and keywords</Text>{" "}
+          from the job description.
         </Text>
       </View>
 
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         <View style={styles.editorSection}>
           <View style={styles.editorHeader}>
-            <Text style={styles.sectionTitle}>Your tailored bullet points</Text>
-
-            <TouchableOpacity onPress={addBullet} style={styles.addButton}>
-              <Text style={styles.addButtonText}>＋ Add bullet</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>Your cover letter</Text>
+            {active && <Text style={styles.activePill}>Active</Text>}
           </View>
 
-          <View style={styles.bulletsList}>
-            {bullets.map((b, idx) => {
-              const isActive = b.id === activeId;
+          <View style={[styles.letterCard, active && styles.letterCardActive]}>
+            <TextInput
+              value={coverLetter}
+              onChangeText={(t) => {
+                setCoverLetter(t);
+                setCoachTips([]);
+                setCoachError(null);
+              }}
+              multiline
+              placeholder={
+                "Start with:\n" +
+                "1) Why this company/role\n" +
+                "2) 1–2 strongest achievements (with metrics)\n" +
+                "3) Why you fit the team + close\n\n" +
+                "Tip: Use keywords from the job description."
+              }
+              placeholderTextColor="#9CA3AF"
+              style={styles.textArea}
+            />
 
-              return (
-                <View
-                  key={b.id}
-                  style={[
-                    styles.bulletCard,
-                    isActive && styles.bulletCardActive,
-                  ]}
-                >
-                  <View style={styles.bulletTopRow}>
-                    <TouchableOpacity
-                      onPress={() => setActiveId(b.id)}
-                      style={styles.bulletTitleWrap}
-                    >
-                      <Text style={styles.bulletLabel}>Bullet {idx + 1}</Text>
-                      {isActive && (
-                        <Text style={styles.activePill}>Active</Text>
-                      )}
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => removeBullet(b.id)}>
-                      <Text style={styles.removeText}>Remove</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <TextInput
-                    value={b.text}
-                    onChangeText={(t) => updateBullet(b.id, t)}
-                    onFocus={() => setActiveId(b.id)}
-                    multiline
-                    placeholder={placeholderForIndex(idx)}
-                    placeholderTextColor="#9CA3AF"
-                    style={styles.textArea}
-                  />
-
-                  <View style={styles.editorFooter}>
-                    <Text style={styles.charCount}>
-                      {b.text.length} characters
-                    </Text>
-                    <Text style={styles.hintMini}>
-                      Aim: action + keyword + impact + metric
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
+            <View style={styles.editorFooter}>
+              <Text style={styles.charCount}>{charCount} characters</Text>
+              <Text style={styles.hintMini}>
+                Aim: motivation + evidence + impact
+              </Text>
+            </View>
           </View>
         </View>
 
+        {/* AI Coach Feedback */}
         <View style={styles.feedbackCard}>
           <View style={styles.feedbackHeader}>
             <View style={styles.feedbackIcon}>
@@ -235,8 +128,7 @@ export function TailorCVScreen({
             <View style={{ flex: 1 }}>
               <Text style={styles.feedbackTitle}>Coach feedback (AI)</Text>
               <Text style={styles.feedbackSubtitle}>
-                Our Coach AI analyses your bullet and suggests improvements
-                based on the job description!
+                Analyse your cover letter for role-specific improvements
               </Text>
             </View>
 
@@ -279,9 +171,10 @@ export function TailorCVScreen({
         </View>
       </ScrollView>
 
+      {/* Footer */}
       <View style={styles.footer}>
         <TouchableOpacity
-          onPress={() => onNavigate("company-research", applicationId)}
+          onPress={() => onNavigate("workspace-overview", applicationId)}
           style={styles.saveButton}
         >
           <Text style={styles.saveButtonText}>Save and continue</Text>
@@ -340,44 +233,26 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: { fontSize: 16, color: "#111827" },
-  addButton: {
-    backgroundColor: "#F3F4F6",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+  activePill: {
+    fontSize: 11,
+    color: "#115E59",
+    backgroundColor: "#CCFBF1",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
   },
-  addButtonText: { fontSize: 12, color: "#111827" },
 
-  bulletsList: { gap: 12, paddingBottom: 8 },
-
-  bulletCard: {
+  letterCard: {
     borderWidth: 1,
     borderColor: "#E5E7EB",
     borderRadius: 14,
     padding: 14,
     backgroundColor: "#FFFFFF",
   },
-  bulletCardActive: {
+  letterCardActive: {
     borderColor: "#99F6E4",
     backgroundColor: "rgba(240, 253, 250, 0.35)",
   },
-  bulletTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  bulletTitleWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
-  bulletLabel: { fontSize: 14, color: "#374151" },
-  activePill: {
-    fontSize: 11,
-    color: "#115E59",
-    backgroundColor: "#CCFBF1",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-  },
-  removeText: { fontSize: 12, color: "#EF4444" },
 
   textArea: {
     borderWidth: 1,
@@ -387,11 +262,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111827",
     textAlignVertical: "top",
-    minHeight: 120,
+    minHeight: 220,
     backgroundColor: "#FFFFFF",
   },
   editorFooter: {
-    marginTop: 8,
+    marginTop: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -399,7 +274,6 @@ const styles = StyleSheet.create({
   charCount: { fontSize: 12, color: "#6B7280" },
   hintMini: { fontSize: 12, color: "#6B7280" },
 
-  // Feedback
   feedbackCard: {
     marginHorizontal: 24,
     marginBottom: 24,
@@ -439,7 +313,6 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 12, color: "#6B7280" },
 
   errorText: { color: "#DC2626", fontSize: 12, lineHeight: 16 },
-
   emptyCoachText: { fontSize: 12, color: "#6B7280", lineHeight: 16 },
 
   tipsList: { gap: 10, marginTop: 8 },

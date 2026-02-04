@@ -35,7 +35,7 @@ Respond as JSON with this shape:
           responseMimeType: "application/json",
         },
       }),
-    },
+    }
   );
 
   if (!res.ok) {
@@ -73,7 +73,7 @@ const toCategory = (value: any): string => {
 };
 
 export async function extractRequirementsFromJobDescription(
-  jobDescription: string,
+  jobDescription: string
 ): Promise<Requirement[]> {
   const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) throw new Error("Missing EXPO_PUBLIC_GEMINI_API_KEY");
@@ -152,7 +152,7 @@ CATEGORY DEFINITIONS:
           responseJsonSchema: schema,
         },
       }),
-    },
+    }
   );
 
   if (!res.ok) {
@@ -245,7 +245,7 @@ Return ONLY the 4 lines and nothing else.
           maxOutputTokens: 2048,
         },
       }),
-    },
+    }
   );
 
   if (!res.ok) {

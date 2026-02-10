@@ -18,6 +18,7 @@ interface TailorCVScreenProps {
   company: string;
   role: string;
   jobDescription?: string;
+  onSaveBullets?: (applicationId: string, bulletPoints: string[]) => void;
 }
 
 type Bullet = {
@@ -33,6 +34,7 @@ export function TailorCVScreen({
   company,
   role,
   jobDescription,
+  onSaveBullets,
 }: TailorCVScreenProps) {
   const [bullets, setBullets] = useState<Bullet[]>([{ id: newId(), text: "" }]);
   const [activeId, setActiveId] = useState<string>(bullets[0].id);
@@ -135,6 +137,12 @@ export function TailorCVScreen({
     } finally {
       setCoachLoading(false);
     }
+  };
+
+  const handleSaveAndContinue = () => {
+    const bulletPoints = bullets.map((b) => b.text.trim()).filter(Boolean);
+    onSaveBullets?.(applicationId, bulletPoints);
+    onNavigate("tailor-cover-letter", applicationId);
   };
 
   return (
@@ -281,7 +289,7 @@ export function TailorCVScreen({
 
       <View style={styles.footer}>
         <TouchableOpacity
-          onPress={() => onNavigate("application-library", applicationId)}
+          onPress={handleSaveAndContinue}
           style={styles.saveButton}
         >
           <Text style={styles.saveButtonText}>Save and continue</Text>

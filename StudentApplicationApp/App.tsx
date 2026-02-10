@@ -49,6 +49,7 @@ export type Workspace = {
   jobDescription?: string;
   requirements?: Requirement[];
   companyResearch?: CompanyResearchNotes;
+  cvBullets?: string[];
   createdAt: number;
 };
 
@@ -312,6 +313,9 @@ export default function App() {
             company={ws?.company ?? ""}
             role={ws?.role ?? ""}
             jobDescription={ws?.jobDescription}
+            onSaveBullets={(id, bulletPoints) =>
+              updateWorkspace(id, { cvBullets: bulletPoints })
+            }
           />
         );
       }
@@ -360,6 +364,7 @@ export default function App() {
             company={ws?.company ?? ""}
             role={ws?.role ?? ""}
             jobDescription={ws?.jobDescription}
+            bulletPoints={ws?.cvBullets ?? []}
           />
         );
       }

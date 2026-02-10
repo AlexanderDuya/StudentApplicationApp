@@ -1,5 +1,6 @@
-type GeminiJobDesc = { jobDescription: string };
 import type { Requirement, RequirementType } from "../App";
+
+type GeminiJobDesc = { jobDescription: string };
 
 const MODEL = "gemini-2.5-flash";
 const MODEL2 = "gemini-2.5-flash-lite";
@@ -35,7 +36,7 @@ Respond as JSON with this shape:
           responseMimeType: "application/json",
         },
       }),
-    }
+    },
   );
 
   if (!res.ok) {
@@ -73,7 +74,7 @@ const toCategory = (value: any): string => {
 };
 
 export async function extractRequirementsFromJobDescription(
-  jobDescription: string
+  jobDescription: string,
 ): Promise<Requirement[]> {
   const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) throw new Error("Missing EXPO_PUBLIC_GEMINI_API_KEY");
@@ -152,7 +153,7 @@ CATEGORY DEFINITIONS:
           responseJsonSchema: schema,
         },
       }),
-    }
+    },
   );
 
   if (!res.ok) {
@@ -207,6 +208,8 @@ export async function analyseCvBullet(args: {
   const company = (args.company || "").trim();
   const role = (args.role || "").trim();
 
+  console.log("analyseCV bulletPoints:", args.bullet);
+
   const prompt = `
 You are an expert CV coach for ${company}.
 
@@ -245,7 +248,7 @@ Return ONLY the 4 lines and nothing else.
           maxOutputTokens: 2048,
         },
       }),
-    }
+    },
   );
 
   if (!res.ok) {
@@ -259,7 +262,6 @@ Return ONLY the 4 lines and nothing else.
       ?.map((p: any) => (typeof p.text === "string" ? p.text : ""))
       .join("") ?? "";
 
-  console.log("🟣 Gemini CV coach rawText:", rawText);
   const cleaned = rawText.trim();
   if (!cleaned) return [];
 
@@ -270,5 +272,97 @@ Return ONLY the 4 lines and nothing else.
     const trimmed = line.trim();
     if (trimmed !== "") lines.push(trimmed);
   }
+  console.log("Gemini CV Coach Output:", lines);
+
+  return lines.slice(0, 4);
+}
+
+export async function analyseCoverLetter(args: {
+  coverLetter: string;
+  company: string;
+  role: string;
+  jobDescription?: string;
+  bulletPoints?: string[];
+}): Promise<string[]> {
+  const apiKey = process.env.EXPO_PUBLIC_GEMINI_FEEDBACK_API_KEY;
+  if (!apiKey) throw new Error("Missing EXPO_PUBLIC_GEMINI_FEEDBACK_API_KEY");
+
+  const coverLetter = (args.coverLetter || "").trim();
+  if (!coverLetter) return [];
+
+  const company = (args.company || "").trim();
+  const role = (args.role || "").trim();
+
+  console.log("analyseCoverLetter bulletPoints:", args.bulletPoints);
+
+  const bullets = args.bulletPoints;
+
+  const prompt = `
+You are an expert cover letter coach for ${company}.
+
+TARGET ROLE: ${role}
+
+JOB DESCRIPTION (use this as the source for keywords and expectations):
+${args.jobDescription}
+
+CANDIDATE EVIDENCE (bullet points the user has created to use as proof/metrics in the cover letter):
+${bullets}
+
+USER COVER LETTER DRAFT:
+${coverLetter}
+
+TASK:
+Give EXACTLY 4 improvements to make this cover letter match THIS role better.
+
+OUTPUT FORMAT (VERY IMPORTANT):
+- Output EXACTLY 4 lines.
+- Each line MUST follow this structure:
+  "Suggestion: <what to add/adjust>. Why: <MUST say why it's relevant to the company and role, and MUST INCLUDE the company NAME or ROLE as part of the reason>."
+- Each line must reference AT LEAST ONE job related keyword/tool/skill from the job description (or an exact responsibility).
+- Prefer suggestions that include the candidate evidence bullets (metrics, tools, outcomes) into the letter.
+- Do NOT rewrite the full cover letter.
+- Do NOT mention "job description says" or quote long text.
+- Keep each suggestion under 30 words.
+- Do not include "-" before each suggestion.
+
+Return ONLY the 4 lines and nothing else.
+`.trim();
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL2}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 2048,
+        },
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini error ${MODEL2} ${res.status}: ${err}`);
+  }
+
+  const data = await res.json();
+  const rawText =
+    data?.candidates?.[0]?.content?.parts
+      ?.map((p: any) => (typeof p.text === "string" ? p.text : ""))
+      .join("") ?? "";
+
+  const cleaned = rawText.trim();
+  if (!cleaned) return [];
+
+  const rawLines = cleaned.split("\n");
+  const lines: string[] = [];
+  for (const line of rawLines) {
+    const trimmed = line.trim();
+    if (trimmed) lines.push(trimmed);
+  }
+  console.log("Gemini CL Coach Output:", lines);
   return lines.slice(0, 4);
 }

@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import type { Screen } from "../App";
+import { analyseCoverLetter } from "../lib/gemini";
 
 interface TailorCoverLetterScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
@@ -16,6 +17,7 @@ interface TailorCoverLetterScreenProps {
   company: string;
   role: string;
   jobDescription?: string;
+  bulletPoints?: string[];
 }
 
 export function TailorCoverLetterScreen({
@@ -24,6 +26,7 @@ export function TailorCoverLetterScreen({
   company,
   role,
   jobDescription,
+  bulletPoints,
 }: TailorCoverLetterScreenProps) {
   const [coverLetter, setCoverLetter] = useState("");
   const [active, setActive] = useState(true);
@@ -46,12 +49,33 @@ export function TailorCoverLetterScreen({
 
     if (!company?.trim() || !role?.trim()) {
       setCoachError(
-        "Missing company/role. Go back and make sure they’re saved."
+        "Missing company/role. Go back and make sure they’re saved.",
       );
       return;
     }
 
     setCoachLoading(true);
+    try {
+      const tips = await analyseCoverLetter({
+        coverLetter: text,
+        company: company.trim(),
+        role: role.trim(),
+        jobDescription,
+        bulletPoints,
+      });
+
+      if (!tips.length) {
+        setCoachError("No suggestions returned. Try adding a bit more detail.");
+      } else {
+        setCoachTips(tips);
+      }
+    } catch (e: any) {
+      setCoachError(
+        e?.message ?? "Something went wrong analysing the cover letter.",
+      );
+    } finally {
+      setCoachLoading(false);
+    }
   };
 
   return (
@@ -71,17 +95,14 @@ export function TailorCoverLetterScreen({
           </Text>
         </View>
       </View>
-
-      {/* Notice */}
       <View style={styles.noticeCard}>
         <Text style={styles.noticeIcon}>✍️</Text>
         <Text style={styles.noticeText}>
-          Write a cover letter that matches the{" "}
-          <Text style={styles.noticeBold}>role, company, and keywords</Text>{" "}
+          Write a cover letter that matches the
+          <Text style={styles.noticeBold}>role, company, and keywords</Text>
           from the job description.
         </Text>
       </View>
-
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         <View style={styles.editorSection}>
           <View style={styles.editorHeader}>
@@ -118,7 +139,6 @@ export function TailorCoverLetterScreen({
           </View>
         </View>
 
-        {/* AI Coach Feedback */}
         <View style={styles.feedbackCard}>
           <View style={styles.feedbackHeader}>
             <View style={styles.feedbackIcon}>
@@ -170,11 +190,9 @@ export function TailorCoverLetterScreen({
           )}
         </View>
       </ScrollView>
-
-      {/* Footer */}
       <View style={styles.footer}>
         <TouchableOpacity
-          onPress={() => onNavigate("workspace-overview", applicationId)}
+          onPress={() => onNavigate("application-library", applicationId)}
           style={styles.saveButton}
         >
           <Text style={styles.saveButtonText}>Save and continue</Text>

@@ -47,7 +47,7 @@ export function CompanyResearchScreen({
     };
 
     updateWorkspace(applicationId, { companyResearch: notes });
-    onNavigate("tailor-cover-letter", applicationId);
+    onNavigate("evidence-mapper", applicationId);
   };
 
   return (
@@ -166,7 +166,9 @@ export function CompanyResearchScreen({
 
       <View style={styles.footer}>
         <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-          <Text style={styles.saveButtonText}>Save research</Text>
+          <Text style={styles.saveButtonText}>
+            Save Research & Start Mapping Evidence
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -45,12 +45,12 @@ export function TailorCVScreen({
 
   const activeBullet = useMemo(
     () => bullets.find((b) => b.id === activeId),
-    [bullets, activeId],
+    [bullets, activeId]
   );
 
   const updateBullet = (id: string, value: string) => {
     setBullets((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, text: value } : b)),
+      prev.map((b) => (b.id === id ? { ...b, text: value } : b))
     );
 
     if (id === activeId) {
@@ -106,14 +106,14 @@ export function TailorCVScreen({
     const bulletText = activeBullet?.text?.trim() ?? "";
     if (!bulletText) {
       setCoachError(
-        "Write something in the active bullet first, then analyse.",
+        "Write something in the active bullet first, then analyse."
       );
       return;
     }
 
     if (!company?.trim() || !role?.trim()) {
       setCoachError(
-        "Missing company/role. Go back and make sure they’re saved.",
+        "Missing company/role. Go back and make sure they’re saved."
       );
       return;
     }
@@ -292,7 +292,9 @@ export function TailorCVScreen({
           onPress={handleSaveAndContinue}
           style={styles.saveButton}
         >
-          <Text style={styles.saveButtonText}>Save and continue</Text>
+          <Text style={styles.saveButtonText}>
+            Save & Start Tailoring A Cover Letter
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

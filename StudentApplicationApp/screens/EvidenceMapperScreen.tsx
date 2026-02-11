@@ -38,7 +38,7 @@ export function EvidenceMapperScreen({
   applicationId,
 }: EvidenceMapperScreenProps) {
   const [expandedReq, setExpandedReq] = useState<string | null>(
-    requirements[0]?.id ?? null,
+    requirements[0]?.id ?? null
   );
 
   const [evidenceByReq, setEvidenceByReq] = useState<
@@ -81,7 +81,7 @@ export function EvidenceMapperScreen({
 
   const mappedCount = useMemo(() => {
     return requirements.filter((r) =>
-      isMapped(evidenceByReq[r.id] ?? emptyEvidence()),
+      isMapped(evidenceByReq[r.id] ?? emptyEvidence())
     ).length;
   }, [requirements, evidenceByReq]);
 
@@ -99,7 +99,7 @@ export function EvidenceMapperScreen({
   const updateEvidence = (
     reqId: string,
     field: keyof EvidenceInputs,
-    value: string,
+    value: string
   ) => {
     setEvidenceByReq((prev) => ({
       ...prev,
@@ -313,7 +313,9 @@ export function EvidenceMapperScreen({
           onPress={() => onNavigate("tailor-cv")}
           style={styles.saveButton}
         >
-          <Text style={styles.saveButtonText}>Save and continue</Text>
+          <Text style={styles.saveButtonText}>
+            Save & Start Tailoring CV Points
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

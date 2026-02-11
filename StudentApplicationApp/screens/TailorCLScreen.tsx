@@ -49,7 +49,7 @@ export function TailorCoverLetterScreen({
 
     if (!company?.trim() || !role?.trim()) {
       setCoachError(
-        "Missing company/role. Go back and make sure they’re saved.",
+        "Missing company/role. Go back and make sure they’re saved."
       );
       return;
     }
@@ -71,7 +71,7 @@ export function TailorCoverLetterScreen({
       }
     } catch (e: any) {
       setCoachError(
-        e?.message ?? "Something went wrong analysing the cover letter.",
+        e?.message ?? "Something went wrong analysing the cover letter."
       );
     } finally {
       setCoachLoading(false);
@@ -195,7 +195,9 @@ export function TailorCoverLetterScreen({
           onPress={() => onNavigate("application-library", applicationId)}
           style={styles.saveButton}
         >
-          <Text style={styles.saveButtonText}>Save and continue</Text>
+          <Text style={styles.saveButtonText}>
+            Save & View Your Application
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

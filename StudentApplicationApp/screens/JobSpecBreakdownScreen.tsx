@@ -12,7 +12,7 @@ import type { Requirement } from "../App";
 interface JobSpecBreakdownScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
   jobDescription?: string;
-  requirements?: Requirement[]; // ✅ NEW
+  requirements?: Requirement[];
   company?: string;
   role?: string;
 }
@@ -30,8 +30,6 @@ export function JobSpecBreakdownScreen({
   const previewText =
     jobDescription?.trim() ||
     "Fetching job description this may take a few seconds…";
-
-  // next step is to have requirements from the gemini api like how i did job description
 
   const filteredRequirements = requirements.filter(
     (req) => filter === "all" || req.type === filter
@@ -189,10 +187,10 @@ export function JobSpecBreakdownScreen({
 
       <View style={styles.footer}>
         <TouchableOpacity
-          onPress={() => onNavigate("evidence-mapper")}
+          onPress={() => onNavigate("company-research")}
           style={styles.ctaButton}
         >
-          <Text style={styles.ctaButtonText}>Start mapping evidence</Text>
+          <Text style={styles.ctaButtonText}>Start Company Research</Text>
         </TouchableOpacity>
       </View>
     </View>

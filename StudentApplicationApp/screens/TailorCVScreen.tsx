@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
-  TextInput,
   StyleSheet,
+  TextInput,
   ActivityIndicator,
 } from "react-native";
 import { Screen } from "../App";
@@ -18,6 +18,7 @@ interface TailorCVScreenProps {
   company: string;
   role: string;
   jobDescription?: string;
+  initialBullets: string[];
   onSaveBullets?: (applicationId: string, bulletPoints: string[]) => void;
 }
 
@@ -28,16 +29,42 @@ type Bullet = {
 
 const newId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+const toBulletState = (strings: string[]): Bullet[] => {
+  const cleaned = (strings ?? [])
+    .map((s) => String(s ?? "").trim())
+    .filter(Boolean);
+  if (cleaned.length === 0) return [{ id: newId(), text: "" }];
+  return cleaned.map((t) => ({ id: newId(), text: t }));
+};
+
 export function TailorCVScreen({
   onNavigate,
   applicationId,
   company,
   role,
   jobDescription,
+  initialBullets,
   onSaveBullets,
 }: TailorCVScreenProps) {
-  const [bullets, setBullets] = useState<Bullet[]>([{ id: newId(), text: "" }]);
-  const [activeId, setActiveId] = useState<string>(bullets[0].id);
+  const [bullets, setBullets] = useState<Bullet[]>(() =>
+    toBulletState(initialBullets)
+  );
+  const [activeId, setActiveId] = useState<string>(() => {
+    const seeded = toBulletState(initialBullets);
+    return seeded[0].id;
+  });
+
+  const hydratedForIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (hydratedForIdRef.current === applicationId) return;
+
+    const seeded = toBulletState(initialBullets);
+    setBullets(seeded);
+    setActiveId(seeded[0].id);
+
+    hydratedForIdRef.current = applicationId;
+  }, [applicationId]);
 
   const [coachTips, setCoachTips] = useState<string[]>([]);
   const [coachLoading, setCoachLoading] = useState(false);
@@ -86,17 +113,16 @@ export function TailorCVScreen({
   const placeholderForIndex = (idx: number) => {
     if (idx === 0) {
       return (
-        "Example (STAR → tailored for Google SWE Intern):\n" +
-        "Situation: Built a React task app for coursework used by classmates.\n" +
+        "Example (STAR → tailored):\n" +
+        "Situation: Built a React task app for coursework.\n" +
         "Task: Create a responsive UI with real-time updates.\n" +
-        "Action: Implemented reusable components + state management; optimized renders.\n" +
-        "Result: 50+ users, 95% grade, faster interactions.\n\n" +
-        "Tailored CV bullet:\n" +
-        "• Built a scalable React UI with reusable components and optimized rendering, delivering real-time updates for 50+ users and improving responsiveness; collaborated with peers to iterate quickly and achieved a 95% project grade."
+        "Action: Implemented reusable components + state management.\n" +
+        "Result: 50+ users, 95% grade.\n\n" +
+        "Tailored bullet:\n" +
+        "• Built a scalable React UI with reusable components and optimized rendering, delivering real-time updates for 50+ users and improving responsiveness."
       );
     }
-
-    return "Write a tailored bullet from your evidence (include skill keywords + a measurable outcome)…";
+    return "Write a tailored bullet from your evidence (include keywords + a measurable outcome)…";
   };
 
   const handleAnalyse = async () => {
@@ -166,8 +192,7 @@ export function TailorCVScreen({
       <View style={styles.noticeCard}>
         <Text style={styles.noticeIcon}>🎯</Text>
         <Text style={styles.noticeText}>
-          You’ve mapped your experience to the requirements. Now rewrite that
-          evidence in a way that matches the
+          Rewrite your evidence in a way that matches the
           <Text style={styles.noticeBold}> role, company, and keywords.</Text>
         </Text>
       </View>
@@ -243,8 +268,8 @@ export function TailorCVScreen({
             <View style={{ flex: 1 }}>
               <Text style={styles.feedbackTitle}>Coach feedback (AI)</Text>
               <Text style={styles.feedbackSubtitle}>
-                Our Coach AI analyses your bullet and suggests improvements
-                based on the job description!
+                Analyses your bullet and suggests improvements based on the job
+                description.
               </Text>
             </View>
 
@@ -409,7 +434,6 @@ const styles = StyleSheet.create({
   charCount: { fontSize: 12, color: "#6B7280" },
   hintMini: { fontSize: 12, color: "#6B7280" },
 
-  // Feedback
   feedbackCard: {
     marginHorizontal: 24,
     marginBottom: 24,
@@ -449,7 +473,6 @@ const styles = StyleSheet.create({
   loadingText: { fontSize: 12, color: "#6B7280" },
 
   errorText: { color: "#DC2626", fontSize: 12, lineHeight: 16 },
-
   emptyCoachText: { fontSize: 12, color: "#6B7280", lineHeight: 16 },
 
   tipsList: { gap: 10, marginTop: 8 },

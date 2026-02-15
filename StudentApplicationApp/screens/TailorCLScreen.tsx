@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,9 @@ import {
   TextInput,
   StyleSheet,
   ActivityIndicator,
+  Modal,
 } from "react-native";
+
 import type { Screen } from "../App";
 import { analyseCoverLetter } from "../lib/gemini";
 
@@ -18,6 +20,13 @@ interface TailorCoverLetterScreenProps {
   role: string;
   jobDescription?: string;
   bulletPoints?: string[];
+  initialCoverLetter?: string;
+  nextVersionNumber: number;
+  onSaveNamedVersion?: (
+    applicationId: string,
+    versionName: string,
+    coverLetter: string
+  ) => void;
 }
 
 export function TailorCoverLetterScreen({
@@ -27,15 +36,30 @@ export function TailorCoverLetterScreen({
   role,
   jobDescription,
   bulletPoints,
+  initialCoverLetter,
+  nextVersionNumber,
+  onSaveNamedVersion,
 }: TailorCoverLetterScreenProps) {
-  const [coverLetter, setCoverLetter] = useState("");
-  const [active, setActive] = useState(true);
+  const [coverLetter, setCoverLetter] = useState(initialCoverLetter ?? "");
+  const [active] = useState(true);
 
   const [coachTips, setCoachTips] = useState<string[]>([]);
   const [coachLoading, setCoachLoading] = useState(false);
   const [coachError, setCoachError] = useState<string | null>(null);
 
   const charCount = useMemo(() => coverLetter.length, [coverLetter]);
+
+  useEffect(() => {
+    setCoverLetter(initialCoverLetter ?? "");
+  }, [applicationId, initialCoverLetter]);
+
+  const [nameOpen, setNameOpen] = useState(false);
+  const [versionName, setVersionName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  const suggestedName = `${company || "Company"} - ${
+    role || "Role"
+  } (v${nextVersionNumber})`;
 
   const handleAnalyse = async () => {
     setCoachError(null);
@@ -95,6 +119,7 @@ export function TailorCoverLetterScreen({
           </Text>
         </View>
       </View>
+
       <View style={styles.noticeCard}>
         <Text style={styles.noticeIcon}>✍️</Text>
         <Text style={styles.noticeText}>
@@ -192,7 +217,11 @@ export function TailorCoverLetterScreen({
       </ScrollView>
       <View style={styles.footer}>
         <TouchableOpacity
-          onPress={() => onNavigate("application-library", applicationId)}
+          onPress={() => {
+            setNameError(null);
+            setVersionName(suggestedName);
+            setNameOpen(true);
+          }}
           style={styles.saveButton}
         >
           <Text style={styles.saveButtonText}>
@@ -200,6 +229,58 @@ export function TailorCoverLetterScreen({
           </Text>
         </TouchableOpacity>
       </View>
+
+      <Modal transparent visible={nameOpen} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Name this saved version</Text>
+
+            <TextInput
+              value={versionName}
+              onChangeText={(t) => {
+                setVersionName(t);
+                if (nameError) setNameError(null);
+              }}
+              placeholder="e.g. Google SWE Intern (v3)"
+              style={styles.modalInput}
+            />
+
+            {!!nameError && <Text style={styles.modalError}>{nameError}</Text>}
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={() => setNameOpen(false)}
+                style={styles.modalBtnSecondary}
+              >
+                <Text style={styles.modalBtnSecondaryText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  const name = versionName.trim();
+                  const text = coverLetter.trim();
+
+                  if (!name) {
+                    setNameError("Please enter a name.");
+                    return;
+                  }
+                  if (!text) {
+                    setNameError("Your cover letter is empty.");
+                    return;
+                  }
+
+                  onSaveNamedVersion?.(applicationId, name, text);
+                  setNameOpen(false);
+                  onNavigate("application-library");
+                }}
+                style={styles.modalBtnPrimary}
+              >
+                <Text style={styles.modalBtnPrimaryText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -353,4 +434,42 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalCard: { backgroundColor: "#FFFFFF", borderRadius: 14, padding: 16 },
+  modalTitle: { fontSize: 16, color: "#111827", marginBottom: 10 },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    color: "#111827",
+  },
+  modalError: { marginTop: 8, color: "#DC2626", fontSize: 12 },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 14,
+  },
+  modalBtnSecondary: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  modalBtnSecondaryText: { color: "#111827", fontWeight: "600", fontSize: 12 },
+  modalBtnPrimary: {
+    backgroundColor: "#14B8A6",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  modalBtnPrimaryText: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
 });

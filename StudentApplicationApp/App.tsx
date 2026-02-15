@@ -41,18 +41,6 @@ export type Requirement = {
   category: string;
 };
 
-export type Workspace = {
-  id: string;
-  jobUrl?: string;
-  company?: string;
-  role?: string;
-  jobDescription?: string;
-  requirements?: Requirement[];
-  companyResearch?: CompanyResearchNotes;
-  cvBullets?: string[];
-  createdAt: number;
-};
-
 export type CompanyResearchNotes = {
   whatDoesCompanyDo?: string;
   recentNews?: string;
@@ -60,9 +48,62 @@ export type CompanyResearchNotes = {
   whyWorkHere?: string;
 };
 
-const normalizeJobUrl = (url: string) => url.trim().toLowerCase();
+export type EvidenceInputs = {
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+};
+
+export type EvidenceByReq = Record<string, EvidenceInputs>;
+
+export type ApplicationVersion = {
+  id: string;
+  name: string;
+  createdAt: number;
+  jobUrl?: string;
+  company?: string;
+  role?: string;
+  jobDescription?: string;
+  requirements?: Requirement[];
+  companyResearch?: CompanyResearchNotes;
+  cvBullets?: string[];
+  coverLetter?: string;
+  evidenceByReq?: EvidenceByReq;
+};
+
+export type Workspace = {
+  id: string;
+  rootId?: string; //version for the application
+  isSnapshot?: boolean;
+  jobUrl?: string;
+  company?: string;
+  role?: string;
+  jobDescription?: string;
+  requirements?: Requirement[];
+  companyResearch?: CompanyResearchNotes;
+  cvBullets?: string[];
+  coverLetter?: string;
+  evidenceByReq?: EvidenceByReq;
+  versions?: ApplicationVersion[]; // if root it may have versions
+  createdAt: number;
+};
+
+const normaliseJobUrl = (url: string) => url.trim().toLowerCase();
 const WORKSPACES_STORAGE_KEY = "workspaces:v1";
 const LAST_WORKSPACE_ID_KEY = "lastWorkspaceId:v1";
+
+const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+// prevent versions from having same ref, making copy
+const deepClone = <T,>(value: T): T => {
+  try {
+    if (typeof globalThis.structuredClone === "function") {
+      return globalThis.structuredClone(value);
+    }
+  } catch {}
+  return JSON.parse(JSON.stringify(value)) as T;
+};
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
@@ -70,21 +111,13 @@ export default function App() {
     string | null
   >(null);
 
-  // local storage for now
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
 
   const updateWorkspace = (id: string, patch: Partial<Workspace>) => {
     setWorkspaces((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, ...patch } : w)),
+      prev.map((w) => (w.id === id ? { ...w, ...patch } : w))
     );
-  };
-  const goJobSpec = () => {
-    if (!selectedApplicationId) {
-      navigate("add-application");
-      return;
-    }
-    navigate("job-spec-breakdown", selectedApplicationId);
   };
 
   useEffect(() => {
@@ -98,14 +131,10 @@ export default function App() {
         if (rawWorkspaces) {
           const parsed = JSON.parse(rawWorkspaces) as Workspace[];
           setWorkspaces(parsed);
-
-          console.log("Hydrated workspaces:", parsed.length);
         }
 
         if (lastId) {
           setSelectedApplicationId(lastId);
-
-          console.log("Hydrated lastWorkspaceId:", lastId);
         }
       } catch (e) {
         console.log("Hydration error:", e);
@@ -116,20 +145,19 @@ export default function App() {
 
     void hydrate();
   }, []);
+
   useEffect(() => {
     if (!isHydrated) return;
-
     void AsyncStorage.setItem(
       WORKSPACES_STORAGE_KEY,
-      JSON.stringify(workspaces),
+      JSON.stringify(workspaces)
     );
-
-    console.log("Saved workspaces:", workspaces.length);
   }, [workspaces, isHydrated]);
+
   const findWorkspaceIdByJobUrl = (jobUrl: string) => {
-    const target = normalizeJobUrl(jobUrl);
+    const target = normaliseJobUrl(jobUrl);
     const found = workspaces.find(
-      (w) => w.jobUrl && normalizeJobUrl(w.jobUrl) === target,
+      (w) => w.jobUrl && normaliseJobUrl(w.jobUrl) === target
     );
     return found?.id ?? null;
   };
@@ -146,24 +174,65 @@ export default function App() {
     }
 
     const now = Date.now();
-    const id = String(now);
+    const id = makeId();
 
     setWorkspaces((prev) => [
       ...prev,
       {
         id,
+        rootId: id,
+        isSnapshot: false,
         createdAt: now,
         ...data,
+        versions: [],
       },
     ]);
 
     return id;
   };
 
+  const createWorkspaceFromVersion = (
+    rootWorkspaceId: string,
+    versionId: string
+  ) => {
+    const root = workspaces.find((w) => w.id === rootWorkspaceId);
+    if (!root) return null;
+
+    const version = (root.versions ?? []).find((v) => v.id === versionId);
+    if (!version) return null;
+
+    const now = Date.now();
+    const newId = makeId();
+
+    const cloned: Workspace = {
+      id: newId,
+      rootId: root.rootId ?? root.id,
+      isSnapshot: true,
+      createdAt: now,
+      jobUrl: version.jobUrl ?? root.jobUrl,
+      company: version.company ?? root.company,
+      role: version.role ?? root.role,
+      jobDescription: version.jobDescription ?? root.jobDescription,
+      requirements: deepClone(version.requirements ?? root.requirements ?? []),
+      companyResearch: deepClone(
+        version.companyResearch ?? root.companyResearch
+      ),
+      cvBullets: deepClone(version.cvBullets ?? root.cvBullets ?? []),
+      coverLetter: version.coverLetter ?? root.coverLetter ?? "",
+      evidenceByReq: deepClone(
+        version.evidenceByReq ?? root.evidenceByReq ?? {}
+      ),
+      versions: undefined,
+    };
+
+    setWorkspaces((prev) => [...prev, cloned]);
+    return newId;
+  };
+
   const clearAllApplications = async () => {
     try {
       const checklistKeys = workspaces.map(
-        (w) => `workspace:${w.id}:checklistSteps`,
+        (w) => `workspace:${w.id}:checklistSteps`
       );
 
       await AsyncStorage.multiRemove([
@@ -171,8 +240,6 @@ export default function App() {
         LAST_WORKSPACE_ID_KEY,
         ...checklistKeys,
       ]);
-
-      console.log("Cleared all applications and checklist progress");
     } catch (e) {
       console.log("Clear error:", e);
     } finally {
@@ -190,8 +257,6 @@ export default function App() {
 
       if (screen === "workspace-overview") {
         void AsyncStorage.setItem(LAST_WORKSPACE_ID_KEY, applicationId);
-
-        console.log("Set lastWorkspaceId:", applicationId);
       }
     }
   };
@@ -271,6 +336,7 @@ export default function App() {
           />
         );
       }
+
       case "evidence-mapper": {
         if (!selectedApplicationId) {
           return (
@@ -289,6 +355,10 @@ export default function App() {
             onNavigate={navigate}
             applicationId={selectedApplicationId}
             requirements={ws?.requirements ?? []}
+            initialEvidenceByReq={ws?.evidenceByReq ?? {}}
+            onSaveEvidenceByReq={(id, evidenceByReq) =>
+              updateWorkspace(id, { evidenceByReq })
+            }
           />
         );
       }
@@ -313,12 +383,14 @@ export default function App() {
             company={ws?.company ?? ""}
             role={ws?.role ?? ""}
             jobDescription={ws?.jobDescription}
+            initialBullets={ws?.cvBullets ?? []}
             onSaveBullets={(id, bulletPoints) =>
               updateWorkspace(id, { cvBullets: bulletPoints })
             }
           />
         );
       }
+
       case "company-research": {
         if (!selectedApplicationId) {
           return (
@@ -356,6 +428,12 @@ export default function App() {
         }
 
         const ws = workspaces.find((w) => w.id === selectedApplicationId);
+        const rootId = ws?.rootId ?? ws?.id;
+        const root = rootId
+          ? workspaces.find((x) => x.id === rootId)
+          : undefined;
+
+        const nextVersionNumber = (root?.versions?.length ?? 0) + 1;
 
         return (
           <TailorCoverLetterScreen
@@ -365,12 +443,68 @@ export default function App() {
             role={ws?.role ?? ""}
             jobDescription={ws?.jobDescription}
             bulletPoints={ws?.cvBullets ?? []}
+            initialCoverLetter={ws?.coverLetter ?? ""}
+            nextVersionNumber={nextVersionNumber}
+            onSaveNamedVersion={(workspaceId, versionName, coverLetterText) => {
+              setWorkspaces((prev) =>
+                prev.map((w) => {
+                  const current = prev.find((x) => x.id === workspaceId);
+                  const rootId = current?.rootId ?? current?.id;
+                  if (w.id !== rootId) return w;
+
+                  const now = Date.now();
+                  const version: ApplicationVersion = {
+                    id: makeId(),
+                    name: versionName.trim(),
+                    createdAt: now,
+
+                    jobUrl: current?.jobUrl ?? w.jobUrl,
+                    company: current?.company ?? w.company,
+                    role: current?.role ?? w.role,
+                    jobDescription: current?.jobDescription ?? w.jobDescription,
+                    requirements: deepClone(
+                      current?.requirements ?? w.requirements ?? []
+                    ),
+
+                    companyResearch: deepClone(
+                      current?.companyResearch ?? w.companyResearch
+                    ),
+                    cvBullets: deepClone(
+                      current?.cvBullets ?? w.cvBullets ?? []
+                    ),
+                    coverLetter: coverLetterText,
+                    evidenceByReq: deepClone(
+                      current?.evidenceByReq ?? w.evidenceByReq ?? {}
+                    ),
+                  };
+
+                  return {
+                    ...w,
+                    coverLetter: coverLetterText,
+                    versions: [...(w.versions ?? []), version],
+                  };
+                })
+              );
+            }}
           />
         );
       }
-      case "application-library": {
-        return <ApplicationLibraryScreen onNavigate={navigate} />;
-      }
+
+      case "application-library":
+        return (
+          <ApplicationLibraryScreen
+            onNavigate={navigate}
+            workspaces={workspaces}
+            onEditVersion={(rootWorkspaceId, versionId) => {
+              const newId = createWorkspaceFromVersion(
+                rootWorkspaceId,
+                versionId
+              );
+              if (!newId) return;
+              navigate("workspace-overview", newId);
+            }}
+          />
+        );
 
       default:
         return (
@@ -390,7 +524,15 @@ export default function App() {
     }
     navigate("workspace-overview", selectedApplicationId);
   };
-  // using emojis from now, will need to replace with suitable icons later
+
+  const goJobSpec = () => {
+    if (!selectedApplicationId) {
+      navigate("add-application");
+      return;
+    }
+    navigate("job-spec-breakdown", selectedApplicationId);
+  };
+
   return (
     <SafeAreaProvider>
       <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
@@ -495,7 +637,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   content: { flex: 1 },
   screenContainer: { flex: 1 },
-
   bottomNav: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
@@ -510,19 +651,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 8,
   },
-  navIcon: {
-    fontSize: 22,
-    marginBottom: 2,
-    opacity: 0.6,
-  },
+  navIcon: { fontSize: 22, marginBottom: 2, opacity: 0.6 },
   navIconActive: { opacity: 1 },
-  navText: {
-    fontSize: 10,
-    color: "#9CA3AF",
-    marginTop: 2,
-  },
-  navTextActive: {
-    color: "#14B8A6",
-    fontWeight: "600",
-  },
+  navText: { fontSize: 10, color: "#9CA3AF", marginTop: 2 },
+  navTextActive: { color: "#14B8A6", fontWeight: "600" },
 });

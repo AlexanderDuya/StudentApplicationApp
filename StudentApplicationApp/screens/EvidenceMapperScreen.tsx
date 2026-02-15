@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -8,22 +8,24 @@ import {
   TextInput,
 } from "react-native";
 import { Screen } from "../App";
-import type { Requirement as ApiRequirement } from "../App";
+import type {
+  Requirement as ApiRequirement,
+  EvidenceByReq,
+  EvidenceInputs,
+} from "../App";
 
 interface EvidenceMapperScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
   applicationId: string;
   requirements: ApiRequirement[];
+  initialEvidenceByReq: EvidenceByReq;
+  onSaveEvidenceByReq: (
+    applicationId: string,
+    evidenceByReq: EvidenceByReq
+  ) => void;
 }
 
 type Confidence = "high" | "medium" | null;
-
-type EvidenceInputs = {
-  situation: string;
-  task: string;
-  action: string;
-  result: string;
-};
 
 const emptyEvidence = (): EvidenceInputs => ({
   situation: "",
@@ -32,34 +34,42 @@ const emptyEvidence = (): EvidenceInputs => ({
   result: "",
 });
 
+const buildHydratedEvidence = (
+  reqs: ApiRequirement[],
+  initial: EvidenceByReq | undefined
+): EvidenceByReq => {
+  const next: EvidenceByReq = { ...(initial ?? {}) };
+  for (const r of reqs) {
+    if (!next[r.id]) next[r.id] = emptyEvidence();
+  }
+  return next;
+};
+
 export function EvidenceMapperScreen({
   onNavigate,
   requirements,
   applicationId,
+  initialEvidenceByReq,
+  onSaveEvidenceByReq,
 }: EvidenceMapperScreenProps) {
   const [expandedReq, setExpandedReq] = useState<string | null>(
     requirements[0]?.id ?? null
   );
 
-  const [evidenceByReq, setEvidenceByReq] = useState<
-    Record<string, EvidenceInputs>
-  >(() => {
-    const initial: Record<string, EvidenceInputs> = {};
-    for (const r of requirements) initial[r.id] = emptyEvidence();
-    return initial;
-  });
+  const [evidenceByReq, setEvidenceByReq] = useState<EvidenceByReq>(() =>
+    buildHydratedEvidence(requirements, initialEvidenceByReq)
+  );
+
+  const evidenceRef = useRef<EvidenceByReq>(evidenceByReq);
+  useEffect(() => {
+    evidenceRef.current = evidenceByReq;
+  }, [evidenceByReq]);
 
   useEffect(() => {
-    setEvidenceByReq((prev) => {
-      const next = { ...prev };
-      for (const r of requirements) {
-        if (!next[r.id]) next[r.id] = emptyEvidence();
-      }
-      return next;
-    });
-
+    const next = buildHydratedEvidence(requirements, initialEvidenceByReq);
+    setEvidenceByReq(next);
     setExpandedReq((cur) => cur ?? requirements[0]?.id ?? null);
-  }, [requirements]);
+  }, [applicationId, initialEvidenceByReq, requirements]);
 
   const isMapped = (ev: EvidenceInputs) =>
     !!(
@@ -101,15 +111,18 @@ export function EvidenceMapperScreen({
     field: keyof EvidenceInputs,
     value: string
   ) => {
-    setEvidenceByReq((prev) => ({
+    const prev = evidenceRef.current;
+    const next: EvidenceByReq = {
       ...prev,
       [reqId]: {
         ...(prev[reqId] ?? emptyEvidence()),
         [field]: value,
       },
-    }));
+    };
+
+    setEvidenceByReq(next);
+    onSaveEvidenceByReq(applicationId, next);
   };
-  console.log("Evidence mapper requirements:", requirements);
 
   return (
     <View style={styles.container}>
@@ -310,7 +323,7 @@ export function EvidenceMapperScreen({
 
       <View style={styles.footer}>
         <TouchableOpacity
-          onPress={() => onNavigate("tailor-cv")}
+          onPress={() => onNavigate("tailor-cv", applicationId)}
           style={styles.saveButton}
         >
           <Text style={styles.saveButtonText}>
@@ -324,7 +337,6 @@ export function EvidenceMapperScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
-
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -408,9 +420,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    marginTop: 8,
   },
   confidenceText: { fontSize: 12 },
-
   expandIcon: { fontSize: 22, color: "#9CA3AF" },
 
   evidenceDetails: {
@@ -423,7 +435,6 @@ const styles = StyleSheet.create({
   },
   evidenceField: { gap: 6 },
   evidenceLabel: { fontSize: 12, color: "#6B7280" },
-
   input: {
     backgroundColor: "#F9FAFB",
     borderRadius: 8,
@@ -448,25 +459,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
-  typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  mustHaveBadge: {
-    backgroundColor: "#FEE2E2",
-  },
-  niceToHaveBadge: {
-    backgroundColor: "#DBEAFE",
-  },
-  typeBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  mustHaveText: {
-    color: "#991B1B",
-  },
-  niceToHaveText: {
-    color: "#1E40AF",
-  },
+
+  typeBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  mustHaveBadge: { backgroundColor: "#FEE2E2" },
+  niceToHaveBadge: { backgroundColor: "#DBEAFE" },
+  typeBadgeText: { fontSize: 12, fontWeight: "600" },
+  mustHaveText: { color: "#991B1B" },
+  niceToHaveText: { color: "#1E40AF" },
 });

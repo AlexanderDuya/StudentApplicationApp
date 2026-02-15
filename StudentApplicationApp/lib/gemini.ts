@@ -4,7 +4,36 @@ type GeminiJobDesc = { jobDescription: string };
 
 const MODEL = "gemini-2.5-flash";
 const MODEL2 = "gemini-2.5-flash-lite";
+
 // only downside is that there is a maximum of 20 limit per day hence why I am using 2 models
+
+//  get text from Gemini response
+const getCandidateText = (data: any): string => {
+  const parts = data?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts)) return "";
+  return parts
+    .map((p: any) => (typeof p?.text === "string" ? p.text : ""))
+    .join("")
+    .trim();
+};
+
+const extractJobDescriptionFallback = (raw: string): string => {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+
+  const match = trimmed.match(/"jobDescription"\s*:\s*"([\s\S]*?)"\s*}/);
+  if (match?.[1]) {
+    const extracted = match[1]
+      .replace(/\\"/g, '"')
+      .replace(/\\n/g, "\n")
+      .replace(/\\t/g, "\t")
+      .replace(/\\\\/g, "\\");
+    return extracted.trim();
+  }
+
+  // no crashing
+  return trimmed;
+};
 
 export async function extractJobDescriptionFromUrl(jobUrl: string) {
   const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
@@ -29,14 +58,13 @@ Respond as JSON with this shape:
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-
         generationConfig: {
           temperature: 0.2,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 10000,
           responseMimeType: "application/json",
         },
       }),
-    },
+    }
   );
 
   if (!res.ok) {
@@ -45,13 +73,36 @@ Respond as JSON with this shape:
   }
 
   const data = await res.json();
-  const rawText =
-    data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") ??
-    "";
-  console.log("🟣 Gemini JD rawText:", rawText);
+  const rawText = getCandidateText(data);
 
-  const parsed = JSON.parse(rawText) as GeminiJobDesc;
-  return (parsed.jobDescription ?? "").trim();
+  console.log(" Gemini JD rawText:", rawText);
+  console.log("Gemini JD finishReason:", data?.candidates?.[0]?.finishReason);
+
+  if (!rawText) {
+    throw new Error(
+      "Gemini returned an empty job description. Try again, or paste the job description manually."
+    );
+  }
+
+  try {
+    const parsed = JSON.parse(rawText) as GeminiJobDesc;
+    const jd = (parsed?.jobDescription ?? "").trim();
+    if (jd) return jd;
+
+    const fallback = extractJobDescriptionFallback(rawText);
+    if (fallback) return fallback;
+
+    throw new Error("Job description missing in Gemini JSON response.");
+  } catch (e) {
+    const fallback = extractJobDescriptionFallback(rawText);
+    if (fallback) return fallback;
+
+    throw new Error(
+      `Failed to parse job description JSON. Try again or paste manually. (${String(
+        e
+      )})`
+    );
+  }
 }
 
 type GeminiRequirements = {
@@ -74,7 +125,7 @@ const toCategory = (value: any): string => {
 };
 
 export async function extractRequirementsFromJobDescription(
-  jobDescription: string,
+  jobDescription: string
 ): Promise<Requirement[]> {
   const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) throw new Error("Missing EXPO_PUBLIC_GEMINI_API_KEY");
@@ -140,9 +191,7 @@ CATEGORY DEFINITIONS:
           {
             role: "user",
             parts: [
-              {
-                text: `${prompt}\n\nJOB DESCRIPTION:\n${jobDescription}`,
-              },
+              { text: `${prompt}\n\nJOB DESCRIPTION:\n${jobDescription}` },
             ],
           },
         ],
@@ -153,7 +202,7 @@ CATEGORY DEFINITIONS:
           responseJsonSchema: schema,
         },
       }),
-    },
+    }
   );
 
   if (!res.ok) {
@@ -167,7 +216,8 @@ CATEGORY DEFINITIONS:
   const rawText =
     candidate?.content?.parts
       ?.map((p: any) => (typeof p.text === "string" ? p.text : ""))
-      .join("") ?? "";
+      .join("")
+      .trim() ?? "";
 
   console.log("🟣 Gemini requirements rawText:", rawText);
   console.log("Finished Reason:", candidate?.finishReason);
@@ -243,12 +293,9 @@ Return ONLY the 4 lines and nothing else.
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 2048,
-        },
+        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
       }),
-    },
+    }
   );
 
   if (!res.ok) {
@@ -260,7 +307,8 @@ Return ONLY the 4 lines and nothing else.
   const rawText =
     data?.candidates?.[0]?.content?.parts
       ?.map((p: any) => (typeof p.text === "string" ? p.text : ""))
-      .join("") ?? "";
+      .join("")
+      .trim() ?? "";
 
   const cleaned = rawText.trim();
   if (!cleaned) return [];
@@ -335,12 +383,9 @@ Return ONLY the 4 lines and nothing else.
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 2048,
-        },
+        generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
       }),
-    },
+    }
   );
 
   if (!res.ok) {
@@ -352,7 +397,8 @@ Return ONLY the 4 lines and nothing else.
   const rawText =
     data?.candidates?.[0]?.content?.parts
       ?.map((p: any) => (typeof p.text === "string" ? p.text : ""))
-      .join("") ?? "";
+      .join("")
+      .trim() ?? "";
 
   const cleaned = rawText.trim();
   if (!cleaned) return [];

@@ -22,30 +22,64 @@ const getGreeting = () => {
   return "Good Evening";
 };
 
+type AppSummary = {
+  rootId: string;
+  company: string;
+  role: string;
+  latestWorkspaceId: string;
+  createdAt: number;
+  versionCount: number;
+};
+
 export function HomeScreen({
   onNavigate,
   workspaces,
   onClearAll,
 }: HomeScreenProps) {
-  const apps = useMemo(() => {
-    return [...workspaces]
-      .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
-      .map((w) => {
-        const company = w.company?.trim() || "Company not set";
-        const role = w.role?.trim() || "Role not set";
-        return {
-          id: w.id,
-          company,
-          role,
-        };
+  const apps = useMemo<AppSummary[]>(() => {
+    const byRoot = new Map<string, Workspace[]>();
+
+    for (const w of workspaces) {
+      const rootId = (w.rootId ?? w.id) as string;
+      const list = byRoot.get(rootId) ?? [];
+      list.push(w);
+      byRoot.set(rootId, list);
+    }
+
+    const summaries: AppSummary[] = [];
+
+    for (const [rootId, family] of byRoot.entries()) {
+      const latestWorkspace = [...family].sort(
+        (a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)
+      )[0];
+
+      const company = latestWorkspace.company?.trim() || "Company not set";
+      const role = latestWorkspace.role?.trim() || "Role not set";
+
+      let versionCount = 0;
+      for (const w of family) {
+        versionCount += w.versions?.length ?? 0;
+      }
+
+      summaries.push({
+        rootId,
+        company,
+        role,
+        latestWorkspaceId: latestWorkspace.id,
+        createdAt: latestWorkspace.createdAt ?? 0,
+        versionCount,
       });
+    }
+
+    return summaries.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }, [workspaces]);
 
-  // For now everything is active
   const activeApps = apps;
-  const completedApps: typeof apps = [];
+  const completedApps: AppSummary[] = [];
 
   const latest = activeApps[0];
+
+  const goLibrary = () => onNavigate("application-library");
 
   return (
     <View style={styles.container}>
@@ -69,7 +103,7 @@ export function HomeScreen({
                       style: "destructive",
                       onPress: onClearAll,
                     },
-                  ],
+                  ]
                 )
               }
               style={styles.resetButton}
@@ -98,9 +132,7 @@ export function HomeScreen({
           </View>
         </View>
 
-        {/* Main Content */}
         <View style={styles.mainContent}>
-          {/* Continue card */}
           {latest ? (
             <View style={styles.nextStepCard}>
               <View style={styles.nextStepContent}>
@@ -114,10 +146,10 @@ export function HomeScreen({
                     {latest.company} • {latest.role}
                   </Text>
 
-                  <TouchableOpacity
-                    onPress={() => onNavigate("workspace-overview", latest.id)}
-                  >
-                    <Text style={styles.nextStepButton}>Open workspace →</Text>
+                  <TouchableOpacity onPress={goLibrary}>
+                    <Text style={styles.nextStepButton}>
+                      Open application library →
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -143,7 +175,6 @@ export function HomeScreen({
             </View>
           )}
 
-          {/* Active Applications */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Active Applications</Text>
 
@@ -163,8 +194,8 @@ export function HomeScreen({
             ) : (
               activeApps.map((app) => (
                 <TouchableOpacity
-                  key={app.id}
-                  onPress={() => onNavigate("workspace-overview", app.id)}
+                  key={app.rootId}
+                  onPress={goLibrary}
                   style={styles.applicationCard}
                 >
                   <View style={styles.cardHeader}>
@@ -172,7 +203,9 @@ export function HomeScreen({
                     <Text style={styles.roleName}>{app.role}</Text>
                   </View>
 
-                  <Text style={styles.openHint}>Tap to open →</Text>
+                  <Text style={styles.openHint}>
+                    Tap to view saved versions ({app.versionCount}) →
+                  </Text>
                 </TouchableOpacity>
               ))
             )}
@@ -191,8 +224,8 @@ export function HomeScreen({
             ) : (
               completedApps.map((app) => (
                 <TouchableOpacity
-                  key={app.id}
-                  onPress={() => onNavigate("workspace-overview", app.id)}
+                  key={app.rootId}
+                  onPress={goLibrary}
                   style={[styles.applicationCard, styles.completedCard]}
                 >
                   <View style={styles.cardHeader}>

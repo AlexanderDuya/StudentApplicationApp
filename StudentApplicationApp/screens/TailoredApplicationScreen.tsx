@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import * as Print from "expo-print";
 import { shareAsync } from "expo-sharing";
+import * as Clipboard from "expo-clipboard";
 import type { Screen, Workspace, ApplicationVersion } from "../App";
 
 interface ApplicationLibraryScreenProps {
@@ -58,8 +59,63 @@ ${version.coverLetter?.trim() ? version.coverLetter : "Not Completed Yet"}
 </body>
 </html>`;
 
+const getMissingSections = (version: ApplicationVersion) => {
+  const missing: string[] = [];
+
+  const r = version.companyResearch;
+  const researchComplete =
+    !!r?.whatDoesCompanyDo?.trim() ||
+    !!r?.recentNews?.trim() ||
+    !!r?.cultureValues?.trim() ||
+    !!r?.whyWorkHere?.trim();
+
+  const cvComplete = (version.cvBullets?.length ?? 0) > 0;
+  const coverComplete = !!version.coverLetter?.trim();
+
+  if (!researchComplete) missing.push("Research");
+  if (!cvComplete) missing.push("CV");
+  if (!coverComplete) missing.push("Cover Letter");
+
+  return missing;
+};
+
+const buildPlainText = (version: ApplicationVersion) => {
+  const r = version.companyResearch;
+
+  const research = `Research
+What does the company do?
+${r?.whatDoesCompanyDo?.trim() || "Not Completed Yet"}
+
+Recent news / developments
+${r?.recentNews?.trim() || "Not Completed Yet"}
+
+Culture & values
+${r?.cultureValues?.trim() || "Not Completed Yet"}
+
+Why work here?
+${r?.whyWorkHere?.trim() || "Not Completed Yet"}`;
+
+  const cv = `CV
+${
+  (version.cvBullets?.length ?? 0) > 0
+    ? version.cvBullets!.join("\n")
+    : "Not Completed Yet"
+}`;
+
+  const cover = `Cover Letter
+${version.coverLetter?.trim() || "Not Completed Yet"}`;
+
+  return `${research}\n\n---\n\n${cv}\n\n---\n\n${cover}\n`;
+};
+
 // using docs expo
 const exportPdf = async (version: ApplicationVersion) => {
+  /*
+  throw new Error(
+    "Testing error: forcing export to fail so clipboard fallback shows.",
+  );
+  */
+
   const html = buildHtml(version);
   const { uri } = await Print.printToFileAsync({ html });
   await shareAsync(uri, { UTI: ".pdf", mimeType: "application/pdf" });
@@ -94,11 +150,45 @@ export function ApplicationLibraryScreen({
   };
 
   const handleExport = async (version: ApplicationVersion) => {
-    try {
-      await exportPdf(version);
-    } catch (e: any) {
-      Alert.alert("Export failed", e?.message ?? "Could not export PDF.");
+    const missing = getMissingSections(version);
+
+    const doExport = async () => {
+      try {
+        await exportPdf(version);
+      } catch (e: any) {
+        Alert.alert("Export failed", e?.message ?? "Could not export PDF.", [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Copy to clipboard",
+            onPress: async () => {
+              try {
+                await Clipboard.setStringAsync(buildPlainText(version));
+                Alert.alert(
+                  "Copied",
+                  "Your Research, CV and Cover Letter were copied.",
+                );
+              } catch {
+                Alert.alert("Copy failed", "Could not copy to clipboard.");
+              }
+            },
+          },
+        ]);
+      }
+    };
+
+    if (missing.length > 0) {
+      Alert.alert(
+        "Application Incomplete",
+        `Before exporting, please complete:\n\n• ${missing.join("\n• ")} \n\nfor a stronger application`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Export anyway", onPress: doExport },
+        ],
+      );
+      return;
     }
+
+    await doExport();
   };
 
   return (

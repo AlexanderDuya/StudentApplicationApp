@@ -7,13 +7,63 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import type { Screen, Workspace } from "../App";
+import * as Print from "expo-print";
+import { shareAsync } from "expo-sharing";
+import type { Screen, Workspace, ApplicationVersion } from "../App";
 
 interface ApplicationLibraryScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
   workspaces: Workspace[];
   onEditVersion: (rootWorkspaceId: string, versionId: string) => void;
 }
+
+const buildHtml = (version: ApplicationVersion) => `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+</head>
+<body>
+  <div style="page-break-after: always;">
+    <h1 style="font-size:24px; font-weight:700; margin:0 0 12px 0;">Research</h1>
+    <div style="white-space: pre-wrap; font-size:14px;">
+What does the company do?
+${version.companyResearch?.whatDoesCompanyDo ?? "Not Completed Yet"}
+
+Recent news / developments
+${version.companyResearch?.recentNews ?? "Not Completed Yet"}
+
+Culture & values
+${version.companyResearch?.cultureValues ?? "Not Completed Yet"}
+
+Why work here?
+${version.companyResearch?.whyWorkHere ?? "Not Completed Yet"}
+    </div>
+  </div>
+
+  <div style="page-break-after: always;">
+    <h1 style="font-size:24px; font-weight:700; margin:0 0 12px 0;">CV</h1>
+    <div style="white-space: pre-wrap; font-size:14px;">
+${(version.cvBullets?.length ?? 0) > 0 ? version.cvBullets!.join("\n") : "Not Completed Yet"}
+    </div>
+  </div>
+
+  <div>
+    <h1 style="font-size:24px; font-weight:700; margin:0 0 12px 0;">Cover Letter</h1>
+    <div style="white-space: pre-wrap; font-size:14px;">
+${version.coverLetter?.trim() ? version.coverLetter : "Not Completed Yet"}
+    </div>
+  </div>
+</body>
+</html>`;
+
+// using docs expo
+const exportPdf = async (version: ApplicationVersion) => {
+  const html = buildHtml(version);
+  const { uri } = await Print.printToFileAsync({ html });
+  await shareAsync(uri, { UTI: ".pdf", mimeType: "application/pdf" });
+};
 
 export function ApplicationLibraryScreen({
   onNavigate,
@@ -29,7 +79,7 @@ export function ApplicationLibraryScreen({
         rootWorkspaceId: w.id,
         company: w.company ?? "Company not set",
         role: w.role ?? "Role not set",
-      }))
+      })),
     );
 
     return flat.sort((a, b) => b.version.createdAt - a.version.createdAt);
@@ -40,6 +90,14 @@ export function ApplicationLibraryScreen({
       return new Date(ts).toLocaleDateString();
     } catch {
       return "—";
+    }
+  };
+
+  const handleExport = async (version: ApplicationVersion) => {
+    try {
+      await exportPdf(version);
+    } catch (e: any) {
+      Alert.alert("Export failed", e?.message ?? "Could not export PDF.");
     }
   };
 
@@ -107,12 +165,7 @@ export function ApplicationLibraryScreen({
               <View style={styles.actions}>
                 <TouchableOpacity
                   style={styles.exportBtn}
-                  onPress={() =>
-                    Alert.alert(
-                      "Export",
-                      "Static export for now (hook up PDF/DOCX later)."
-                    )
-                  }
+                  onPress={() => handleExport(item.version)}
                 >
                   <Text style={styles.exportText}>Export</Text>
                 </TouchableOpacity>

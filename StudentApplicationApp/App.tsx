@@ -19,10 +19,16 @@ import { TailorCVScreen } from "./screens/TailorCVScreen";
 import { TailorCoverLetterScreen } from "./screens/TailorCLScreen";
 import { CompanyResearchScreen } from "./screens/CompanyResearchScreen";
 import { ApplicationLibraryScreen } from "./screens/TailoredApplicationScreen";
+import { ProgressCompetencyScreen } from "./screens/CompetencyProgressScreen";
+import { CommunityScreen } from "./screens/CommunityScreen";
+import { ProfileScreen } from "./screens/ProfileScreen";
 
 export type Screen =
   | "home"
   | "add-application"
+  | "progress-competency"
+  | "community"
+  | "profile"
   | "workspace-overview"
   | "job-spec-breakdown"
   | "job-spec-description"
@@ -116,7 +122,7 @@ export default function App() {
 
   const updateWorkspace = (id: string, patch: Partial<Workspace>) => {
     setWorkspaces((prev) =>
-      prev.map((w) => (w.id === id ? { ...w, ...patch } : w))
+      prev.map((w) => (w.id === id ? { ...w, ...patch } : w)),
     );
   };
 
@@ -150,14 +156,14 @@ export default function App() {
     if (!isHydrated) return;
     void AsyncStorage.setItem(
       WORKSPACES_STORAGE_KEY,
-      JSON.stringify(workspaces)
+      JSON.stringify(workspaces),
     );
   }, [workspaces, isHydrated]);
 
   const findWorkspaceIdByJobUrl = (jobUrl: string) => {
     const target = normaliseJobUrl(jobUrl);
     const found = workspaces.find(
-      (w) => w.jobUrl && normaliseJobUrl(w.jobUrl) === target
+      (w) => w.jobUrl && normaliseJobUrl(w.jobUrl) === target,
     );
     return found?.id ?? null;
   };
@@ -193,7 +199,7 @@ export default function App() {
 
   const createWorkspaceFromVersion = (
     rootWorkspaceId: string,
-    versionId: string
+    versionId: string,
   ) => {
     const root = workspaces.find((w) => w.id === rootWorkspaceId);
     if (!root) return null;
@@ -215,12 +221,12 @@ export default function App() {
       jobDescription: version.jobDescription ?? root.jobDescription,
       requirements: deepClone(version.requirements ?? root.requirements ?? []),
       companyResearch: deepClone(
-        version.companyResearch ?? root.companyResearch
+        version.companyResearch ?? root.companyResearch,
       ),
       cvBullets: deepClone(version.cvBullets ?? root.cvBullets ?? []),
       coverLetter: version.coverLetter ?? root.coverLetter ?? "",
       evidenceByReq: deepClone(
-        version.evidenceByReq ?? root.evidenceByReq ?? {}
+        version.evidenceByReq ?? root.evidenceByReq ?? {},
       ),
       versions: undefined,
     };
@@ -232,7 +238,7 @@ export default function App() {
   const clearAllApplications = async () => {
     try {
       const checklistKeys = workspaces.map(
-        (w) => `workspace:${w.id}:checklistSteps`
+        (w) => `workspace:${w.id}:checklistSteps`,
       );
 
       await AsyncStorage.multiRemove([
@@ -281,6 +287,15 @@ export default function App() {
             updateWorkspace={updateWorkspace}
           />
         );
+
+      case "progress-competency":
+        return <ProgressCompetencyScreen onNavigate={navigate} />;
+
+      case "community":
+        return <CommunityScreen />;
+
+      case "profile":
+        return <ProfileScreen />;
 
       case "workspace-overview": {
         if (!selectedApplicationId) {
@@ -457,24 +472,22 @@ export default function App() {
                     id: makeId(),
                     name: versionName.trim(),
                     createdAt: now,
-
                     jobUrl: current?.jobUrl ?? w.jobUrl,
                     company: current?.company ?? w.company,
                     role: current?.role ?? w.role,
                     jobDescription: current?.jobDescription ?? w.jobDescription,
                     requirements: deepClone(
-                      current?.requirements ?? w.requirements ?? []
+                      current?.requirements ?? w.requirements ?? [],
                     ),
-
                     companyResearch: deepClone(
-                      current?.companyResearch ?? w.companyResearch
+                      current?.companyResearch ?? w.companyResearch,
                     ),
                     cvBullets: deepClone(
-                      current?.cvBullets ?? w.cvBullets ?? []
+                      current?.cvBullets ?? w.cvBullets ?? [],
                     ),
                     coverLetter: coverLetterText,
                     evidenceByReq: deepClone(
-                      current?.evidenceByReq ?? w.evidenceByReq ?? {}
+                      current?.evidenceByReq ?? w.evidenceByReq ?? {},
                     ),
                   };
 
@@ -483,7 +496,7 @@ export default function App() {
                     coverLetter: coverLetterText,
                     versions: [...(w.versions ?? []), version],
                   };
-                })
+                }),
               );
             }}
           />
@@ -498,7 +511,7 @@ export default function App() {
             onEditVersion={(rootWorkspaceId, versionId) => {
               const newId = createWorkspaceFromVersion(
                 rootWorkspaceId,
-                versionId
+                versionId,
               );
               if (!newId) return;
               navigate("workspace-overview", newId);
@@ -515,22 +528,6 @@ export default function App() {
           />
         );
     }
-  };
-
-  const goWorkspace = () => {
-    if (!selectedApplicationId) {
-      navigate("add-application");
-      return;
-    }
-    navigate("workspace-overview", selectedApplicationId);
-  };
-
-  const goJobSpec = () => {
-    if (!selectedApplicationId) {
-      navigate("add-application");
-      return;
-    }
-    navigate("job-spec-breakdown", selectedApplicationId);
   };
 
   return (
@@ -585,45 +582,71 @@ export default function App() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={goWorkspace} style={styles.navButton}>
+            <TouchableOpacity
+              onPress={() => navigate("progress-competency")}
+              style={styles.navButton}
+            >
               <Text
                 style={[
                   styles.navIcon,
-                  currentScreen === "workspace-overview" &&
+                  currentScreen === "progress-competency" &&
                     styles.navIconActive,
                 ]}
               >
-                🗂️
+                📈
               </Text>
               <Text
                 style={[
                   styles.navText,
-                  currentScreen === "workspace-overview" &&
+                  currentScreen === "progress-competency" &&
                     styles.navTextActive,
                 ]}
               >
-                Workspace
+                Progress
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={goJobSpec} style={styles.navButton}>
+            <TouchableOpacity
+              onPress={() => navigate("community")}
+              style={styles.navButton}
+            >
               <Text
                 style={[
                   styles.navIcon,
-                  currentScreen === "job-spec-breakdown" &&
-                    styles.navIconActive,
+                  currentScreen === "community" && styles.navIconActive,
                 ]}
               >
-                🧾
+                💬
               </Text>
               <Text
                 style={[
                   styles.navText,
-                  currentScreen === "job-spec-breakdown" &&
-                    styles.navTextActive,
+                  currentScreen === "community" && styles.navTextActive,
                 ]}
               >
-                Job Spec
+                Community
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => navigate("profile")}
+              style={styles.navButton}
+            >
+              <Text
+                style={[
+                  styles.navIcon,
+                  currentScreen === "profile" && styles.navIconActive,
+                ]}
+              >
+                👤
+              </Text>
+              <Text
+                style={[
+                  styles.navText,
+                  currentScreen === "profile" && styles.navTextActive,
+                ]}
+              >
+                Profile
               </Text>
             </TouchableOpacity>
           </View>

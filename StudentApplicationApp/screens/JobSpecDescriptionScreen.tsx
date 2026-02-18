@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { Screen } from "../App";
 
@@ -21,10 +22,18 @@ export function JobSpecDescriptionScreen({
   company,
   role,
 }: JobSpecDescriptionScreenProps) {
-  // If I get some time I can add a loading icon whilst its fetching so its not just static text
-  const fullJobDescription =
-    jobDescription?.trim() ||
-    "Fetching job description this may take a few seconds…";
+  const isLoading = jobDescription === undefined;
+  const hasJobDescription = !!jobDescription?.trim();
+
+  useEffect(() => {
+    console.log("isLoading:", isLoading);
+    console.log("jobDescription type:", typeof jobDescription);
+    console.log(
+      "jobDescription length:",
+      jobDescription?.length ?? "undefined",
+    );
+    console.log("hasJobDescription:", hasJobDescription);
+  }, [isLoading, jobDescription, hasJobDescription]);
 
   return (
     <View style={styles.container}>
@@ -51,7 +60,20 @@ export function JobSpecDescriptionScreen({
         contentContainerStyle={styles.content}
       >
         <View style={styles.card}>
-          <Text style={styles.descriptionText}>{fullJobDescription}</Text>
+          {isLoading ? (
+            <View style={styles.loadingRow}>
+              <ActivityIndicator />
+              <Text style={styles.loadingText}>
+                Fetching job description this may take a few seconds…
+              </Text>
+            </View>
+          ) : hasJobDescription ? (
+            <Text style={styles.descriptionText}>{jobDescription}</Text>
+          ) : (
+            <Text style={styles.descriptionText}>
+              No job description found yet.
+            </Text>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -67,11 +89,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  headerTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
+  headerTop: { flexDirection: "row", alignItems: "center", gap: 16 },
   backButton: {
     width: 40,
     height: 40,
@@ -95,9 +113,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
-  descriptionText: {
-    fontSize: 14,
-    color: "#374151",
-    lineHeight: 20,
-  },
+  loadingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  loadingText: { fontSize: 14, color: "#6B7280", lineHeight: 20 },
+  descriptionText: { fontSize: 14, color: "#374151", lineHeight: 20 },
 });

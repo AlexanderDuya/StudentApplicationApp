@@ -77,6 +77,7 @@ export function AddApplicationScreen({
     jobDescription?: string;
   }) => {
     const id = createWorkspace(data);
+    console.log("Created workspace:", id, data);
     onNavigate("workspace-overview", id);
     return id;
   };
@@ -123,25 +124,31 @@ export function AddApplicationScreen({
         jobDescription: trimmedJD,
       });
 
+      console.log("Requirements are currently undefined, spinner should show");
+
       try {
+        console.log("Extracting requirements now");
         const reqs = await extractRequirementsFromJobDescription(trimmedJD);
+
+        console.log("Requirements now extracted", reqs.length);
         updateWorkspace(id, { requirements: reqs });
-        console.log("Saved requirements count:", reqs.length, reqs);
       } catch (e) {
-        console.log("Failed to extract requirements:", e);
+        console.log("Requirements extraction failed:", e);
+        console.log("Setting requirements empty so spinner stops");
+        updateWorkspace(id, { requirements: [] });
       }
 
       return;
     }
 
-    const trimmed = jobUrl.trim();
+    const trimmedUrl = jobUrl.trim();
 
-    if (!trimmed) {
+    if (!trimmedUrl) {
       setError("Please paste a job link to continue.");
       return;
     }
 
-    if (!isValidHttpUrl(trimmed)) {
+    if (!isValidHttpUrl(trimmedUrl)) {
       setError(
         "That link doesn’t look valid. Please check it, or paste the job description manually instead.",
       );
@@ -149,7 +156,7 @@ export function AddApplicationScreen({
     }
 
     //  DUPLICATE CHECK
-    const existingId = findWorkspaceIdByJobUrl(trimmed);
+    const existingId = findWorkspaceIdByJobUrl(trimmedUrl);
     if (existingId) {
       setDuplicateWorkspaceId(existingId);
       setError("Looks like you’ve already added this job.");
@@ -158,7 +165,7 @@ export function AddApplicationScreen({
 
     setIsChecking(true);
     try {
-      const ok = await checkUrlReachable(trimmed);
+      const ok = await checkUrlReachable(trimmedUrl);
       if (!ok) {
         setError(
           "We couldn’t access that job link right now. No stress, you can paste the job description manually instead.",
@@ -167,24 +174,42 @@ export function AddApplicationScreen({
       }
 
       const id = createWorkspaceAndGo({
-        jobUrl: trimmed,
+        jobUrl: trimmedUrl,
         company: trimmedCompany,
         role: trimmedRole,
       });
 
+      console.log(
+        "Job description is currently undefined, spinner should show",
+      );
+      console.log("Requirements are currently undefined, spinner should show");
+
       try {
-        const jd = await extractJobDescriptionFromUrl(trimmed);
+        console.log("Fetching job description now");
+        const jd = await extractJobDescriptionFromUrl(trimmedUrl);
+
+        console.log("Job description now fetched", jd?.length ?? 0);
+        console.log("Setting job description so spinner stops");
         updateWorkspace(id, { jobDescription: jd });
 
         try {
+          console.log("Extracting requirements now");
           const reqs = await extractRequirementsFromJobDescription(jd);
+
+          console.log("Requirements now extracted", reqs.length);
           updateWorkspace(id, { requirements: reqs });
-          console.log("Saved requirements count:", reqs.length, reqs);
         } catch (e) {
-          console.log("❌ Requirements extraction failed:", e);
+          console.log("Requirements extraction failed:", e);
+          console.log("Setting requirements empty so spinner stops");
+          updateWorkspace(id, { requirements: [] });
         }
       } catch (e) {
-        console.log("❌ Job description extraction failed:", e);
+        console.log("Job description extraction failed:", e);
+        console.log("Setting job description empty so spinner stops");
+        updateWorkspace(id, { jobDescription: "" });
+
+        console.log("Setting requirements empty so spinner stops");
+        updateWorkspace(id, { requirements: [] });
       }
     } catch {
       setError(

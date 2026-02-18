@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
 import { Screen } from "../App";
 import type { Requirement } from "../App";
@@ -19,20 +20,34 @@ interface JobSpecBreakdownScreenProps {
 export function JobSpecBreakdownScreen({
   onNavigate,
   jobDescription,
-  requirements = [],
+  requirements,
   company,
   role,
 }: JobSpecBreakdownScreenProps) {
   const [filter, setFilter] = useState<"all" | "must-have" | "nice-to-have">(
-    "all"
+    "all",
   );
 
-  const previewText =
-    jobDescription?.trim() ||
-    "Fetching job description this may take a few seconds…";
+  const jobDescIsLoading = jobDescription === undefined;
+  const reqsAreLoading = requirements === undefined;
 
-  const filteredRequirements = requirements.filter(
-    (req) => filter === "all" || req.type === filter
+  const hasJobDescription = !!jobDescription?.trim();
+  const reqList = requirements ?? [];
+
+  useEffect(() => {
+    console.log("jobDescIsLoading:", jobDescIsLoading);
+    console.log("hasJobDescription:", hasJobDescription);
+    console.log("reqsAreLoading:", reqsAreLoading);
+    console.log("requirements length:", requirements?.length ?? "undefined");
+  }, [
+    jobDescIsLoading,
+    hasJobDescription,
+    reqsAreLoading,
+    requirements?.length,
+  ]);
+
+  const filteredRequirements = reqList.filter(
+    (req) => filter === "all" || req.type === filter,
   );
 
   return (
@@ -67,7 +82,7 @@ export function JobSpecBreakdownScreen({
                 filter === "all" && styles.filterTabTextActive,
               ]}
             >
-              All ({requirements.length})
+              All ({reqList.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -113,9 +128,11 @@ export function JobSpecBreakdownScreen({
           <View style={styles.aiContent}>
             <Text style={styles.aiTitle}>AI extracted requirements</Text>
             <Text style={styles.aiDescription}>
-              {requirements.length
-                ? `We've analyzed the job spec and identified ${requirements.length} key requirements.`
-                : "Analyzing the job spec and extracting key requirements…"}
+              {reqsAreLoading
+                ? "Analysing the job spec and extracting key requirements…"
+                : reqList.length
+                  ? `We've analysed the job spec and identified ${reqList.length} key requirements.`
+                  : "No requirements extracted yet."}
             </Text>
           </View>
         </View>
@@ -123,9 +140,22 @@ export function JobSpecBreakdownScreen({
         <View style={styles.jobPreview}>
           <Text style={styles.jobPreviewTitle}>Original job description</Text>
           <View style={styles.jobPreviewContent}>
-            <Text style={styles.jobPreviewText} numberOfLines={4}>
-              {previewText}
-            </Text>
+            {jobDescIsLoading ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator />
+                <Text style={styles.loadingText}>
+                  Fetching job description this may take a few seconds…
+                </Text>
+              </View>
+            ) : hasJobDescription ? (
+              <Text style={styles.jobPreviewText} numberOfLines={4}>
+                {jobDescription}
+              </Text>
+            ) : (
+              <Text style={styles.emptyText}>
+                No job description found yet.
+              </Text>
+            )}
             <TouchableOpacity
               onPress={() => onNavigate("job-spec-description")}
             >
@@ -140,12 +170,19 @@ export function JobSpecBreakdownScreen({
           </View>
 
           <View style={styles.requirementsList}>
-            {requirements.length === 0 ? (
-              <Text style={styles.loadingText}>
-                Fetching requirements this may take a few seconds…
+            {reqsAreLoading ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator />
+                <Text style={styles.loadingText}>
+                  Fetching requirements this may take a few seconds…
+                </Text>
+              </View>
+            ) : reqList.length === 0 ? (
+              <Text style={styles.emptyText}>
+                No requirements extracted yet.
               </Text>
             ) : filteredRequirements.length === 0 ? (
-              <Text style={styles.loadingText}>
+              <Text style={styles.emptyText}>
                 No requirements match this filter.
               </Text>
             ) : (
@@ -198,10 +235,7 @@ export function JobSpecBreakdownScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFFFFF",
-  },
+  container: { flex: 1, backgroundColor: "#FFFFFF" },
   header: {
     paddingHorizontal: 24,
     paddingVertical: 16,
@@ -222,44 +256,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: {
-    fontSize: 20,
-    color: "#374151",
-  },
-  headerInfo: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    color: "#111827",
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-  filterTabs: {
-    flexDirection: "row",
-    gap: 8,
-  },
+  backIcon: { fontSize: 20, color: "#374151" },
+  headerInfo: { flex: 1 },
+  headerTitle: { fontSize: 20, color: "#111827" },
+  headerSubtitle: { fontSize: 14, color: "#6B7280" },
+  filterTabs: { flexDirection: "row", gap: 8 },
   filterTab: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
     backgroundColor: "#F3F4F6",
   },
-  filterTabActive: {
-    backgroundColor: "#CCFBF1",
-  },
-  filterTabText: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
-  filterTabTextActive: {
-    color: "#115E59",
-  },
-  scrollView: {
-    flex: 1,
-  },
+  filterTabActive: { backgroundColor: "#CCFBF1" },
+  filterTabText: { fontSize: 14, color: "#6B7280" },
+  filterTabTextActive: { color: "#115E59" },
+  scrollView: { flex: 1 },
   aiNotice: {
     paddingHorizontal: 24,
     paddingVertical: 16,
@@ -278,77 +289,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  aiIconText: {
-    fontSize: 16,
-  },
-  aiContent: {
-    flex: 1,
-  },
-  aiTitle: {
-    fontSize: 14,
-    color: "#581C87",
-    marginBottom: 4,
-  },
-  aiDescription: {
-    fontSize: 12,
-    color: "#7C3AED",
-    lineHeight: 16,
-  },
+  aiIconText: { fontSize: 16 },
+  aiContent: { flex: 1 },
+  aiTitle: { fontSize: 14, color: "#581C87", marginBottom: 4 },
+  aiDescription: { fontSize: 12, color: "#7C3AED", lineHeight: 16 },
   jobPreview: {
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  jobPreviewTitle: {
-    fontSize: 14,
-    color: "#111827",
-    marginBottom: 8,
-  },
+  jobPreviewTitle: { fontSize: 14, color: "#111827", marginBottom: 8 },
   jobPreviewContent: {
     backgroundColor: "#F9FAFB",
     borderRadius: 8,
     padding: 16,
+    gap: 8,
   },
-  jobPreviewText: {
-    fontSize: 14,
-    color: "#6B7280",
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  jobPreviewMore: {
-    fontSize: 12,
-    color: "#14B8A6",
-  },
-  requirementsSection: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-  },
+  jobPreviewText: { fontSize: 14, color: "#6B7280", lineHeight: 20 },
+  jobPreviewMore: { fontSize: 12, color: "#14B8A6" },
+  requirementsSection: { paddingHorizontal: 24, paddingVertical: 16 },
   requirementsHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
   },
-  requirementsTitle: {
-    fontSize: 16,
-    color: "#111827",
-  },
-  filterButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  filterIcon: {
-    fontSize: 16,
-  },
-  filterButtonText: {
-    fontSize: 14,
-    color: "#14B8A6",
-  },
-  requirementsList: {
-    gap: 12,
-  },
+  requirementsTitle: { fontSize: 16, color: "#111827" },
+  requirementsList: { gap: 12 },
+  loadingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  loadingText: { fontSize: 14, color: "#6B7280", lineHeight: 20 },
+  emptyText: { fontSize: 14, color: "#6B7280", lineHeight: 20 },
   requirementCard: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -362,36 +333,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 8,
+    gap: 12,
   },
-  requirementTitle: {
-    flex: 1,
-    fontSize: 16,
-    color: "#111827",
-  },
-  typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  mustHaveBadge: {
-    backgroundColor: "#FEE2E2",
-  },
-  niceToHaveBadge: {
-    backgroundColor: "#DBEAFE",
-  },
-  typeBadgeText: {
-    fontSize: 12,
-  },
-  mustHaveText: {
-    color: "#991B1B",
-  },
-  niceToHaveText: {
-    color: "#1E40AF",
-  },
-  requirementCategory: {
-    fontSize: 14,
-    color: "#6B7280",
-  },
+  requirementTitle: { flex: 1, fontSize: 16, color: "#111827" },
+  typeBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  mustHaveBadge: { backgroundColor: "#FEE2E2" },
+  niceToHaveBadge: { backgroundColor: "#DBEAFE" },
+  typeBadgeText: { fontSize: 12 },
+  mustHaveText: { color: "#991B1B" },
+  niceToHaveText: { color: "#1E40AF" },
+
+  requirementCategory: { fontSize: 14, color: "#6B7280" },
+
   footer: {
     paddingHorizontal: 24,
     paddingVertical: 16,
@@ -404,14 +357,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-  ctaButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  loadingText: {
-    fontSize: 14,
-    color: "#6B7280",
-    lineHeight: 20,
-  },
+  ctaButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
 });

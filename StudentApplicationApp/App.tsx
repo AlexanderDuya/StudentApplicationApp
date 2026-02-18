@@ -22,6 +22,7 @@ import { ApplicationLibraryScreen } from "./screens/TailoredApplicationScreen";
 import { ProgressCompetencyScreen } from "./screens/CompetencyProgressScreen";
 import { CommunityScreen } from "./screens/CommunityScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
+import { StrengthBreakdownScreen } from "./screens/StrengthBreakdownScreen";
 
 export type Screen =
   | "home"
@@ -36,7 +37,8 @@ export type Screen =
   | "tailor-cv"
   | "tailor-cover-letter"
   | "company-research"
-  | "application-library";
+  | "application-library"
+  | "strength-breakdown";
 
 export type RequirementType = "must-have" | "nice-to-have";
 
@@ -518,6 +520,21 @@ export default function App() {
             }}
           />
         );
+
+      case "strength-breakdown": {
+        if (!selectedApplicationId) return null;
+
+        const ws = workspaces.find((w) => w.id === selectedApplicationId);
+
+        return (
+          <StrengthBreakdownScreen
+            onNavigate={navigate}
+            applicationId={selectedApplicationId}
+            company={ws?.company}
+            role={ws?.role}
+          />
+        );
+      }
 
       default:
         return (

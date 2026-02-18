@@ -236,11 +236,9 @@ export function WorkspaceOverviewScreen({
             <Text style={styles.strengthIcon}>📈</Text>
             <Text style={styles.strengthTitle}>Application strength</Text>
           </View>
-
           <TouchableOpacity
             onPress={() => {
-              // TODO: add "strength-breakdown" screen later
-              // onNavigate("strength-breakdown")
+              onNavigate("strength-breakdown", applicationId);
             }}
           >
             <Text style={styles.strengthDetailsButton}>Details →</Text>

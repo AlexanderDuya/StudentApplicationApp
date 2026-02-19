@@ -95,7 +95,7 @@ export function TailorCoverLetterScreen({
       }
     } catch (e: any) {
       setCoachError(
-        e?.message ?? "Something went wrong analysing the cover letter.",
+        "Please try again later, there seems to be an issue with generating tailored feedback right now. This is likely due to high demand and should be resolved soon. In the meantime, try improving your cover letter using the tips you already have and keep going!",
       );
     } finally {
       setCoachLoading(false);

@@ -159,7 +159,9 @@ export function TailorCVScreen({
         setCoachTips(tips);
       }
     } catch (e: any) {
-      setCoachError(e?.message ?? "Something went wrong analysing the bullet.");
+      setCoachError(
+        "Please try again later, there seems to be an issue with generating tailored feedback right now. This is likely due to high demand and should be resolved soon. In the meantime, try improving your points with the tips given and move on to tailoring your cover letter!",
+      );
     } finally {
       setCoachLoading(false);
     }

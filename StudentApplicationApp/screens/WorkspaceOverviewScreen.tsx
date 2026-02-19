@@ -194,7 +194,7 @@ export function WorkspaceOverviewScreen({
         <View style={styles.headerTop}>
           <TouchableOpacity
             onPress={() => {
-              // TODO: decide what screen to open for completed steps
+              onNavigate("home", applicationId);
             }}
             style={styles.backButton}
           >

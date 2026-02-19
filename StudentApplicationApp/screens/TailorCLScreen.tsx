@@ -25,7 +25,7 @@ interface TailorCoverLetterScreenProps {
   onSaveNamedVersion?: (
     applicationId: string,
     versionName: string,
-    coverLetter: string
+    coverLetter: string,
   ) => void;
 }
 
@@ -73,7 +73,7 @@ export function TailorCoverLetterScreen({
 
     if (!company?.trim() || !role?.trim()) {
       setCoachError(
-        "Missing company/role. Go back and make sure they’re saved."
+        "Missing company/role. Go back and make sure they’re saved.",
       );
       return;
     }
@@ -95,7 +95,7 @@ export function TailorCoverLetterScreen({
       }
     } catch (e: any) {
       setCoachError(
-        e?.message ?? "Something went wrong analysing the cover letter."
+        e?.message ?? "Something went wrong analysing the cover letter.",
       );
     } finally {
       setCoachLoading(false);
@@ -106,7 +106,7 @@ export function TailorCoverLetterScreen({
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => onNavigate("workspace-overview", applicationId)}
+          onPress={() => onNavigate("tailor-cv", applicationId)}
           style={styles.backButton}
         >
           <Text style={styles.backIcon}>←</Text>

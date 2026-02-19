@@ -47,7 +47,7 @@ export function TailorCVScreen({
   onSaveBullets,
 }: TailorCVScreenProps) {
   const [bullets, setBullets] = useState<Bullet[]>(() =>
-    toBulletState(initialBullets)
+    toBulletState(initialBullets),
   );
   const [activeId, setActiveId] = useState<string>(() => {
     const seeded = toBulletState(initialBullets);
@@ -72,12 +72,12 @@ export function TailorCVScreen({
 
   const activeBullet = useMemo(
     () => bullets.find((b) => b.id === activeId),
-    [bullets, activeId]
+    [bullets, activeId],
   );
 
   const updateBullet = (id: string, value: string) => {
     setBullets((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, text: value } : b))
+      prev.map((b) => (b.id === id ? { ...b, text: value } : b)),
     );
 
     if (id === activeId) {
@@ -132,14 +132,14 @@ export function TailorCVScreen({
     const bulletText = activeBullet?.text?.trim() ?? "";
     if (!bulletText) {
       setCoachError(
-        "Write something in the active bullet first, then analyse."
+        "Write something in the active bullet first, then analyse.",
       );
       return;
     }
 
     if (!company?.trim() || !role?.trim()) {
       setCoachError(
-        "Missing company/role. Go back and make sure they’re saved."
+        "Missing company/role. Go back and make sure they’re saved.",
       );
       return;
     }
@@ -175,7 +175,7 @@ export function TailorCVScreen({
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => onNavigate("workspace-overview", applicationId)}
+          onPress={() => onNavigate("evidence-mapper", applicationId)}
           style={styles.backButton}
         >
           <Text style={styles.backIcon}>←</Text>

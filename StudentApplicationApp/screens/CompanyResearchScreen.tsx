@@ -54,7 +54,7 @@ export function CompanyResearchScreen({
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => onNavigate("workspace-overview", applicationId)}
+          onPress={() => onNavigate("job-spec-breakdown", applicationId)}
           style={styles.backButton}
         >
           <Text style={styles.backIcon}>←</Text>

@@ -21,7 +21,7 @@ interface EvidenceMapperScreenProps {
   initialEvidenceByReq: EvidenceByReq;
   onSaveEvidenceByReq: (
     applicationId: string,
-    evidenceByReq: EvidenceByReq
+    evidenceByReq: EvidenceByReq,
   ) => void;
 }
 
@@ -36,7 +36,7 @@ const emptyEvidence = (): EvidenceInputs => ({
 
 const buildHydratedEvidence = (
   reqs: ApiRequirement[],
-  initial: EvidenceByReq | undefined
+  initial: EvidenceByReq | undefined,
 ): EvidenceByReq => {
   const next: EvidenceByReq = { ...(initial ?? {}) };
   for (const r of reqs) {
@@ -53,11 +53,11 @@ export function EvidenceMapperScreen({
   onSaveEvidenceByReq,
 }: EvidenceMapperScreenProps) {
   const [expandedReq, setExpandedReq] = useState<string | null>(
-    requirements[0]?.id ?? null
+    requirements[0]?.id ?? null,
   );
 
   const [evidenceByReq, setEvidenceByReq] = useState<EvidenceByReq>(() =>
-    buildHydratedEvidence(requirements, initialEvidenceByReq)
+    buildHydratedEvidence(requirements, initialEvidenceByReq),
   );
 
   const evidenceRef = useRef<EvidenceByReq>(evidenceByReq);
@@ -91,7 +91,7 @@ export function EvidenceMapperScreen({
 
   const mappedCount = useMemo(() => {
     return requirements.filter((r) =>
-      isMapped(evidenceByReq[r.id] ?? emptyEvidence())
+      isMapped(evidenceByReq[r.id] ?? emptyEvidence()),
     ).length;
   }, [requirements, evidenceByReq]);
 
@@ -109,7 +109,7 @@ export function EvidenceMapperScreen({
   const updateEvidence = (
     reqId: string,
     field: keyof EvidenceInputs,
-    value: string
+    value: string,
   ) => {
     const prev = evidenceRef.current;
     const next: EvidenceByReq = {
@@ -128,7 +128,7 @@ export function EvidenceMapperScreen({
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => onNavigate("workspace-overview", applicationId)}
+          onPress={() => onNavigate("company-research", applicationId)}
           style={styles.backButton}
         >
           <Text style={styles.backIcon}>←</Text>

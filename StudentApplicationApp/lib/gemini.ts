@@ -64,7 +64,7 @@ Respond as JSON with this shape:
           responseMimeType: "application/json",
         },
       }),
-    }
+    },
   );
 
   if (!res.ok) {
@@ -75,12 +75,12 @@ Respond as JSON with this shape:
   const data = await res.json();
   const rawText = getCandidateText(data);
 
-  console.log(" Gemini JD rawText:", rawText);
+  console.log("Gemini JD rawText:", rawText);
   console.log("Gemini JD finishReason:", data?.candidates?.[0]?.finishReason);
 
   if (!rawText) {
     throw new Error(
-      "Gemini returned an empty job description. Try again, or paste the job description manually."
+      "Gemini returned an empty job description. Try again, or paste the job description manually.",
     );
   }
 
@@ -98,9 +98,7 @@ Respond as JSON with this shape:
     if (fallback) return fallback;
 
     throw new Error(
-      `Failed to parse job description JSON. Try again or paste manually. (${String(
-        e
-      )})`
+      `Failed to parse job description JSON. Try again or paste manually. (${String(e)})`,
     );
   }
 }
@@ -125,7 +123,7 @@ const toCategory = (value: any): string => {
 };
 
 export async function extractRequirementsFromJobDescription(
-  jobDescription: string
+  jobDescription: string,
 ): Promise<Requirement[]> {
   const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) throw new Error("Missing EXPO_PUBLIC_GEMINI_API_KEY");
@@ -150,7 +148,7 @@ RULES:
 CATEGORY DEFINITIONS: 
 - Technical = programming languages, frameworks, systems, tools, CS fundamentals (e.g, React, Java, SQL, AWS, data structures).
 - Soft Skills = interpersonal or cognitive skills (e.g., communication, leadership, problem solving).
-- Process = ways of workinG, policies, workflows (e.g., Agile, code reviews, testing, documentation, security clearance).
+- Process = ways of working, policies, workflows (e.g., Agile, code reviews, testing, documentation, security clearance).
 - Domain = industry/product knowledge (e.g., fintech payments, investment banking).
 
 `.trim();
@@ -202,7 +200,7 @@ CATEGORY DEFINITIONS:
           responseJsonSchema: schema,
         },
       }),
-    }
+    },
   );
 
   if (!res.ok) {
@@ -295,7 +293,7 @@ Return ONLY the 4 lines and nothing else.
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
       }),
-    }
+    },
   );
 
   if (!res.ok) {
@@ -385,7 +383,7 @@ Return ONLY the 4 lines and nothing else.
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.2, maxOutputTokens: 2048 },
       }),
-    }
+    },
   );
 
   if (!res.ok) {
@@ -412,3 +410,137 @@ Return ONLY the 4 lines and nothing else.
   console.log("Gemini CL Coach Output:", lines);
   return lines.slice(0, 4);
 }
+
+export type StrengthResult = {
+  overall: number;
+  explanation: string;
+  nextAction: string;
+  components: {
+    roleAlignment: number;
+    evidenceQuality: number;
+    coverLetterStructure: number;
+    companyPersonalisation: number;
+  };
+  changes: Array<{ points: number; reason: string }>;
+  calculatedAt: string;
+};
+
+export async function calculateApplicationStrength(args: {
+  coverLetter: string;
+  company: string;
+  role: string;
+  jobDescription?: string;
+  bulletPoints?: string[];
+}): Promise<StrengthResult> {
+  const apiKey = process.env.EXPO_PUBLIC_GEMINI_STRENGTH_API_KEY;
+  if (!apiKey) throw new Error("Missing EXPO_PUBLIC_GEMINI_STRENGTH_API_KEY");
+
+  const { coverLetter, company, role, jobDescription, bulletPoints } = args;
+
+  const prompt = `
+You are an application strength scorer. You MUST be harsh and strict. Low effort = low score. No exceptions.
+
+ROLE: ${role}
+COMPANY: ${company}
+
+JOB DESCRIPTION:
+${jobDescription ?? "Not provided"}
+
+CANDIDATE BULLET POINTS:
+${bulletPoints?.join("\n") ?? "None provided"}
+
+COVER LETTER:
+${coverLetter}
+
+STEP 1 — LENGTH AND EFFORT CHECK (apply before scoring anything):
+- Count the number of lines and paragraphs in the cover letter.
+- 1–2 sentences: ALL components MUST be 0–10. Stop. Do not score higher.
+- 3–4 sentences: ALL components MUST be 0–20. Stop. Do not score higher.
+- Only a cover letter with 1 or more full paragraphs is eligible to score above 40 in any component.
+
+STEP 2 — COMPONENT SCORING (only if cover letter passes length check):
+
+ROLE ALIGNMENT FROM COVER LETTER AND BULLET POINTS (weight 30% of overall):
+- 0–20:   Fewer than 3 words or phrases from the job description appear in the cover letter, and weak bullet points with no clear evidence
+- 21–40:  1–2 job description keywords present but no responsibilities addressed
+- 41–65:  Several keywords used but role requirements are not explicitly tackled
+- 66–85:  Most key requirements addressed with relevant, specific language
+- 86–100: Many core requirements addressed with precise role-matched evidence
+
+EVIDENCE QUALITY FROM BULLET POINTS (weight 25% of overall):
+- 0–20:   Zero examples, only vague claims ("I am passionate", "I work hard", "I am skilled")
+- 21–40:  One vague example with no numbers, outcomes, or specifics
+- 41–65:  1–2 examples present but metrics or measurable outcomes are missing
+- 66–85:  2+ examples with quantified impact (%, £, count, time saved, etc.)
+- 86–100: 3+ examples with strong measurable outcomes drawn from the bullet points
+
+COVER LETTER STRUCTURE (weight 25% of overall):
+- 0–20:   No structure, a single line or sentence, cannot be called a letter
+- 21–40:  A short paragraph exists but has no opening motivation, does not address role requirements or express company research
+- 41–65:  Some structure but motivation is generic, explains some fit but not clearly linked to role and surface level knowledge of the company
+- 66–85:  Clear opening with motivation, body addresses multiple role requirements with specific evidence, some company research and personalisation
+- 86–100: Compelling opening with specific motivation, well structured body that addresses most role requirements with strong evidence, and multiple clear references to the company culture, values, mission, or products throughout the cover letter
+
+COMPANY PERSONALISATION (weight 20% of overall):
+- 0–20:   Company not mentioned, or mentioned once with zero context or research
+- 21–40:  Company name used but no values, products, mission, or culture referenced at all
+- 41–65:  One surface-level reference (e.g. "I admire your mission") with no real depth
+- 66–85:  A specific company value, product, or initiative referenced meaningfully
+- 86–100: Multiple specific company values or products woven naturally throughout
+
+STEP 3 — OVERALL:
+Calculate as (roleAlignment * 0.30) + (evidenceQuality * 0.25) + (coverLetterStructure * 0.25) + (companyPersonalisation * 0.20), rounded to nearest integer.
+
+STEP 4 — CHANGES:
+List 2 things that positively contributed to the score. If the cover letter is very weak, keep points values between 1–5 only.
+
+Return ONLY valid JSON, no markdown, no commentary:
+{
+  "overall": <integer 0–100>,
+  "explanation": "<one sentence: tell the candidate directly using 'you'/'your' why this score was given, be honest but encouraging. Highlighting best thing about their application as supporting evidence.'>",
+  "nextAction": "<one sentence: the single most impactful improvement that the student can make next (for example more personalisation, more evidence in bullet points etc), must sound encouraging>",
+  "components": {
+    "roleAlignment": <integer 0–100>,
+    "evidenceQuality": <integer 0–100>,
+    "coverLetterStructure": <integer 0–100>,
+    "companyPersonalisation": <integer 0–100>
+  },
+  "changes": [
+    { "points": <int>, "reason": "<what the candidate did well>" },
+    { "points": <int>, "reason": "<second positive thing>" }
+  ]
+}
+`.trim();
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL2}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0, maxOutputTokens: 512 },
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini strength error ${res.status}: ${err}`);
+  }
+
+  const data = await res.json();
+  const rawText = getCandidateText(data);
+  console.log("Gemini Strength rawText:", rawText);
+
+  const cleaned = rawText.replace(/```json|```/g, "").trim();
+  const parsed = JSON.parse(cleaned) as StrengthResult;
+
+  return {
+    ...parsed,
+    calculatedAt: new Date().toISOString(),
+  };
+}
+
+export const strengthStorageKey = (applicationId: string) =>
+  `strength:${applicationId}`;

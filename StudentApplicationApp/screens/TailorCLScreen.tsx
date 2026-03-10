@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
@@ -11,7 +12,13 @@ import {
 } from "react-native";
 
 import type { Screen } from "../App";
-import { analyseCoverLetter } from "../lib/gemini";
+import {
+  analyseCoverLetter,
+  calculateApplicationStrength,
+  strengthStorageKey,
+} from "../lib/gemini";
+
+const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 interface TailorCoverLetterScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
@@ -24,6 +31,7 @@ interface TailorCoverLetterScreenProps {
   nextVersionNumber: number;
   onSaveNamedVersion?: (
     applicationId: string,
+    versionId: string,
     versionName: string,
     coverLetter: string,
   ) => void;
@@ -56,6 +64,7 @@ export function TailorCoverLetterScreen({
   const [nameOpen, setNameOpen] = useState(false);
   const [versionName, setVersionName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
+  const [strengthLoading, setStrengthLoading] = useState(false);
 
   const suggestedName = `${company || "Company"} - ${
     role || "Role"
@@ -73,7 +82,7 @@ export function TailorCoverLetterScreen({
 
     if (!company?.trim() || !role?.trim()) {
       setCoachError(
-        "Missing company/role. Go back and make sure they’re saved.",
+        "Missing company/role. Go back and make sure they're saved.",
       );
       return;
     }
@@ -93,12 +102,54 @@ export function TailorCoverLetterScreen({
       } else {
         setCoachTips(tips);
       }
-    } catch (e: any) {
+    } catch {
       setCoachError(
         "Please try again later, there seems to be an issue with generating tailored feedback right now. This is likely due to high demand and should be resolved soon. In the meantime, try improving your cover letter using the tips you already have and keep going!",
       );
     } finally {
       setCoachLoading(false);
+    }
+  };
+
+  const handleFinalSave = async () => {
+    const name = versionName.trim();
+    const text = coverLetter.trim();
+
+    if (!name) {
+      setNameError("Please enter a name.");
+      return;
+    }
+    if (!text) {
+      setNameError("Your cover letter is empty.");
+      return;
+    }
+
+    const versionId = makeId();
+
+    onSaveNamedVersion?.(applicationId, versionId, name, text);
+    setNameOpen(false);
+
+    setStrengthLoading(true);
+    try {
+      const result = await calculateApplicationStrength({
+        coverLetter: text,
+        company: company.trim(),
+        role: role.trim(),
+        jobDescription,
+        bulletPoints,
+      });
+
+      await AsyncStorage.setItem(
+        strengthStorageKey(versionId),
+        JSON.stringify(result),
+      );
+
+      console.log("Strength saved for version:", versionId, result.overall);
+    } catch (e) {
+      console.warn("Strength calculation failed:", e);
+    } finally {
+      setStrengthLoading(false);
+      onNavigate("application-library");
     }
   };
 
@@ -124,10 +175,11 @@ export function TailorCoverLetterScreen({
         <Text style={styles.noticeIcon}>✍️</Text>
         <Text style={styles.noticeText}>
           Write a cover letter that matches the
-          <Text style={styles.noticeBold}>role, company, and keywords</Text>
+          <Text style={styles.noticeBold}> role, company, and keywords </Text>
           from the job description.
         </Text>
       </View>
+
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         <View style={styles.editorSection}>
           <View style={styles.editorHeader}>
@@ -215,6 +267,7 @@ export function TailorCoverLetterScreen({
           )}
         </View>
       </ScrollView>
+
       <View style={styles.footer}>
         <TouchableOpacity
           onPress={() => {
@@ -229,6 +282,20 @@ export function TailorCoverLetterScreen({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {strengthLoading && (
+        <View style={styles.strengthOverlay}>
+          <View style={styles.strengthOverlayCard}>
+            <ActivityIndicator color="#14B8A6" size="large" />
+            <Text style={styles.strengthOverlayTitle}>
+              Calculating your application strength...
+            </Text>
+            <Text style={styles.strengthOverlaySubtitle}>
+              This only takes a moment
+            </Text>
+          </View>
+        </View>
+      )}
 
       <Modal transparent visible={nameOpen} animationType="fade">
         <View style={styles.modalOverlay}>
@@ -256,23 +323,7 @@ export function TailorCoverLetterScreen({
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => {
-                  const name = versionName.trim();
-                  const text = coverLetter.trim();
-
-                  if (!name) {
-                    setNameError("Please enter a name.");
-                    return;
-                  }
-                  if (!text) {
-                    setNameError("Your cover letter is empty.");
-                    return;
-                  }
-
-                  onSaveNamedVersion?.(applicationId, name, text);
-                  setNameOpen(false);
-                  onNavigate("application-library");
-                }}
+                onPress={handleFinalSave}
                 style={styles.modalBtnPrimary}
               >
                 <Text style={styles.modalBtnPrimaryText}>Save</Text>
@@ -434,6 +485,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   saveButtonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+
+  strengthOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 99,
+  },
+  strengthOverlayCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 28,
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 40,
+  },
+  strengthOverlayTitle: {
+    fontSize: 15,
+    color: "#111827",
+    textAlign: "center",
+  },
+  strengthOverlaySubtitle: {
+    fontSize: 12,
+    color: "#6B7280",
+    textAlign: "center",
+  },
 
   modalOverlay: {
     flex: 1,

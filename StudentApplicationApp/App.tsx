@@ -82,8 +82,9 @@ export type ApplicationVersion = {
 
 export type Workspace = {
   id: string;
-  rootId?: string; //version for the application
+  rootId?: string;
   isSnapshot?: boolean;
+  sourceVersionId?: string;
   jobUrl?: string;
   company?: string;
   role?: string;
@@ -93,7 +94,7 @@ export type Workspace = {
   cvBullets?: string[];
   coverLetter?: string;
   evidenceByReq?: EvidenceByReq;
-  versions?: ApplicationVersion[]; // if root it may have versions
+  versions?: ApplicationVersion[];
   createdAt: number;
 };
 
@@ -216,6 +217,7 @@ export default function App() {
       id: newId,
       rootId: root.rootId ?? root.id,
       isSnapshot: true,
+      sourceVersionId: versionId,
       createdAt: now,
       jobUrl: version.jobUrl ?? root.jobUrl,
       company: version.company ?? root.company,
@@ -313,10 +315,15 @@ export default function App() {
 
         const ws = workspaces.find((w) => w.id === selectedApplicationId);
 
+        const strengthApplicationId =
+          ws?.sourceVersionId ?? selectedApplicationId;
+
         return (
           <WorkspaceOverviewScreen
+            key={selectedApplicationId}
             onNavigate={navigate}
             applicationId={selectedApplicationId}
+            strengthApplicationId={strengthApplicationId}
             company={ws?.company}
             role={ws?.role}
           />
@@ -462,7 +469,12 @@ export default function App() {
             bulletPoints={ws?.cvBullets ?? []}
             initialCoverLetter={ws?.coverLetter ?? ""}
             nextVersionNumber={nextVersionNumber}
-            onSaveNamedVersion={(workspaceId, versionName, coverLetterText) => {
+            onSaveNamedVersion={(
+              workspaceId,
+              versionId,
+              versionName,
+              coverLetterText,
+            ) => {
               setWorkspaces((prev) =>
                 prev.map((w) => {
                   const current = prev.find((x) => x.id === workspaceId);
@@ -471,7 +483,7 @@ export default function App() {
 
                   const now = Date.now();
                   const version: ApplicationVersion = {
-                    id: makeId(),
+                    id: versionId,
                     name: versionName.trim(),
                     createdAt: now,
                     jobUrl: current?.jobUrl ?? w.jobUrl,
@@ -505,11 +517,17 @@ export default function App() {
         );
       }
 
-      case "application-library":
+      case "application-library": {
+        const ws = selectedApplicationId
+          ? workspaces.find((w) => w.id === selectedApplicationId)
+          : undefined;
+        const rootId = ws?.rootId ?? ws?.id;
+
         return (
           <ApplicationLibraryScreen
             onNavigate={navigate}
             workspaces={workspaces}
+            rootApplicationId={rootId}
             onEditVersion={(rootWorkspaceId, versionId) => {
               const newId = createWorkspaceFromVersion(
                 rootWorkspaceId,
@@ -520,16 +538,21 @@ export default function App() {
             }}
           />
         );
+      }
 
       case "strength-breakdown": {
         if (!selectedApplicationId) return null;
 
         const ws = workspaces.find((w) => w.id === selectedApplicationId);
+        const strengthApplicationId =
+          ws?.sourceVersionId ?? selectedApplicationId;
 
         return (
           <StrengthBreakdownScreen
+            key={selectedApplicationId}
             onNavigate={navigate}
             applicationId={selectedApplicationId}
+            strengthApplicationId={strengthApplicationId}
             company={ws?.company}
             role={ws?.role}
           />

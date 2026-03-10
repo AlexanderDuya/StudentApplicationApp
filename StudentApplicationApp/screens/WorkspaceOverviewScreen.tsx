@@ -8,10 +8,12 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
+import { strengthStorageKey, type StrengthResult } from "../lib/gemini";
 
 export interface WorkspaceOverviewScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
   applicationId: string;
+  strengthApplicationId: string;
   company?: string;
   role?: string;
 }
@@ -89,10 +91,15 @@ const BASE_STEPS: Step[] = [
 export function WorkspaceOverviewScreen({
   onNavigate,
   applicationId,
+  strengthApplicationId,
   company,
   role,
 }: WorkspaceOverviewScreenProps) {
   const [steps, setSteps] = useState<Step[]>(BASE_STEPS);
+
+  const [strengthResult, setStrengthResult] = useState<StrengthResult | null>(
+    null,
+  );
 
   const displayCompany = company?.trim() || "Company not set";
   const displayRole = role?.trim() || "Role not set";
@@ -133,6 +140,22 @@ export function WorkspaceOverviewScreen({
     };
   }, [applicationId]);
 
+  useEffect(() => {
+    setStrengthResult(null);
+
+    const loadStrength = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(
+          strengthStorageKey(strengthApplicationId),
+        );
+        if (raw) setStrengthResult(JSON.parse(raw) as StrengthResult);
+      } catch {
+        // ignore
+      }
+    };
+    void loadStrength();
+  }, [strengthApplicationId]);
+
   const saveSteps = async (nextSteps: Step[]) => {
     const map: Record<string, boolean> = {};
     nextSteps.forEach((s) => {
@@ -163,26 +186,26 @@ export function WorkspaceOverviewScreen({
     [steps],
   );
 
-  // progress calc (10% increments for now)
+  // progress calc
   const progressPercentage = useMemo(() => {
     const raw = (completedSteps / steps.length) * 100;
     const roundedDownTo10 = Math.floor(raw / 10) * 10;
     return Math.min(100, Math.max(0, roundedDownTo10));
   }, [completedSteps, steps.length]);
 
-  // TODO: application strength should come from an API later sprint will cover
-  const strengthPercentage = progressPercentage;
+  // Use AI strength score if available, otherwise fall back to progress percentage
+  const strengthPercentage = strengthResult?.overall ?? 0;
 
   const strengthLabel = useMemo(() => {
     if (strengthPercentage >= 80) return "Excellent - Nearly there!";
     if (strengthPercentage >= 60) return "Strong - Keep going!";
-    if (strengthPercentage >= 40) return "Getting there - Nice progress!";
-    return "Needs work - You’ve got this!";
+    if (strengthPercentage >= 45) return "Getting there - Nice progress!";
+    return "Needs work - You've got this!";
   }, [strengthPercentage]);
 
   const strengthBarFillColor = useMemo(() => {
     if (strengthPercentage >= 80) return "#22C55E";
-    if (strengthPercentage >= 50) return "#EAB308";
+    if (strengthPercentage >= 45) return "#EAB308";
     return "#EF4444";
   }, [strengthPercentage]);
 
@@ -233,7 +256,6 @@ export function WorkspaceOverviewScreen({
       <View style={styles.strengthCard}>
         <View style={styles.strengthHeader}>
           <View style={styles.strengthTitleContainer}>
-            <Text style={styles.strengthIcon}>📈</Text>
             <Text style={styles.strengthTitle}>Application strength</Text>
           </View>
           <TouchableOpacity
@@ -269,9 +291,10 @@ export function WorkspaceOverviewScreen({
         </View>
 
         <View style={styles.strengthInfo}>
-          <Text style={styles.strengthInfoIcon}>ℹ️</Text>
           <Text style={styles.strengthInfoText}>
-            Your score improves as you complete checklist steps.
+            {strengthResult
+              ? "Score calculated from application quality!."
+              : "Your score improves as you follow the checklist, and updates at the end once you save."}
           </Text>
         </View>
       </View>
@@ -287,7 +310,7 @@ export function WorkspaceOverviewScreen({
             <TouchableOpacity
               key={step.id}
               onPress={() => {
-                // TODO: decide what screen to open for completed steps
+                // TODO: right now it toggles but i might want it to do some extra stuff later will ask stakeholder
                 toggleStep(step.id);
               }}
               style={styles.stepItem}
@@ -422,7 +445,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
   },
-  strengthInfoIcon: { fontSize: 16, marginTop: 2 },
   strengthInfoText: { flex: 1, fontSize: 12, color: "#6B21A8" },
 
   checklistScroll: { flex: 1 },

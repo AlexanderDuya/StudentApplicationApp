@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,14 @@ import {
 import * as Print from "expo-print";
 import { shareAsync } from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Screen, Workspace, ApplicationVersion } from "../App";
+import { strengthStorageKey, type StrengthResult } from "../lib/gemini";
 
 interface ApplicationLibraryScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
   workspaces: Workspace[];
+  rootApplicationId?: string;
   onEditVersion: (rootWorkspaceId: string, versionId: string) => void;
 }
 
@@ -124,22 +127,67 @@ const exportPdf = async (version: ApplicationVersion) => {
 export function ApplicationLibraryScreen({
   onNavigate,
   workspaces,
+  rootApplicationId,
   onEditVersion,
 }: ApplicationLibraryScreenProps) {
-  const items = useMemo(() => {
-    const roots = workspaces.filter((w) => !w.isSnapshot);
+  const [strengthScores, setStrengthScores] = useState<Record<string, number>>(
+    {},
+  );
 
-    const flat = roots.flatMap((w) =>
-      (w.versions ?? []).map((v) => ({
-        version: v,
-        rootWorkspaceId: w.id,
-        company: w.company ?? "Company not set",
-        role: w.role ?? "Role not set",
+  const items = useMemo(() => {
+    const roots = workspaces.filter((workspace) => {
+      if (workspace.isSnapshot) return false;
+      if (rootApplicationId) return workspace.id === rootApplicationId;
+      return true;
+    });
+
+    const flat = roots.flatMap((rootApplication) =>
+      (rootApplication.versions ?? []).map((savedVersion) => ({
+        version: savedVersion,
+        rootWorkspaceId: rootApplication.id,
+        company: rootApplication.company ?? "Company not set",
+        role: rootApplication.role ?? "Role not set",
       })),
     );
 
     return flat.sort((a, b) => b.version.createdAt - a.version.createdAt);
-  }, [workspaces]);
+  }, [workspaces, rootApplicationId]);
+
+  useEffect(() => {
+    const loadAllVersionScores = async () => {
+      const rootApplications = workspaces.filter((workspace) => {
+        if (workspace.isSnapshot) return false;
+        if (rootApplicationId) return workspace.id === rootApplicationId;
+        return true;
+      });
+
+      const versionScores: Record<string, number> = {};
+
+      await Promise.all(
+        rootApplications.flatMap((rootApplication) =>
+          (rootApplication.versions ?? []).map(async (savedVersion) => {
+            try {
+              const rawStoredScore = await AsyncStorage.getItem(
+                strengthStorageKey(savedVersion.id),
+              );
+              if (rawStoredScore) {
+                const parsedScore = JSON.parse(
+                  rawStoredScore,
+                ) as StrengthResult;
+                versionScores[savedVersion.id] = parsedScore.overall;
+              }
+            } catch {
+              // Ignore for now
+            }
+          }),
+        ),
+      );
+
+      setStrengthScores(versionScores);
+    };
+
+    void loadAllVersionScores();
+  }, [workspaces, rootApplicationId]);
 
   const formatDate = (ts: number) => {
     try {
@@ -147,6 +195,12 @@ export function ApplicationLibraryScreen({
     } catch {
       return "—";
     }
+  };
+
+  const strengthBadgeStyle = (score: number) => {
+    if (score >= 75) return styles.strengthTagStrong;
+    if (score >= 45) return styles.strengthTagGood;
+    return styles.strengthTagWeak;
   };
 
   const handleExport = async (version: ApplicationVersion) => {
@@ -205,71 +259,82 @@ export function ApplicationLibraryScreen({
         {items.length === 0 ? (
           <Text style={styles.emptyText}>No saved versions yet.</Text>
         ) : (
-          items.map((item) => (
-            <View key={item.version.id} style={styles.card}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.company}>{item.version.name}</Text>
-                <Text style={styles.role}>
-                  {item.company} • {item.role}
-                </Text>
-                <Text style={styles.meta}>
-                  Saved: {formatDate(item.version.createdAt)}
-                </Text>
+          items.map((item) => {
+            const score = strengthScores[item.version.id];
+            const hasScore = score !== undefined;
 
-                <View style={styles.tagsRow}>
-                  <Text
-                    style={[
-                      styles.tag,
-                      item.version.companyResearch
-                        ? styles.tagOn
-                        : styles.tagOff,
-                    ]}
-                  >
-                    Research {item.version.companyResearch ? "✓" : "—"}
+            return (
+              <View key={item.version.id} style={styles.card}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.company}>{item.version.name}</Text>
+                  <Text style={styles.role}>
+                    {item.company} • {item.role}
+                  </Text>
+                  <Text style={styles.meta}>
+                    Saved: {formatDate(item.version.createdAt)}
                   </Text>
 
-                  <Text
-                    style={[
-                      styles.tag,
-                      (item.version.cvBullets?.length ?? 0) > 0
-                        ? styles.tagOn
-                        : styles.tagOff,
-                    ]}
-                  >
-                    CV {(item.version.cvBullets?.length ?? 0) > 0 ? "✓" : "—"}
-                  </Text>
+                  <View style={styles.tagsRow}>
+                    <Text
+                      style={[
+                        styles.tag,
+                        item.version.companyResearch
+                          ? styles.tagOn
+                          : styles.tagOff,
+                      ]}
+                    >
+                      Research {item.version.companyResearch ? "✓" : "—"}
+                    </Text>
 
-                  <Text
-                    style={[
-                      styles.tag,
-                      item.version.coverLetter?.trim()
-                        ? styles.tagOn
-                        : styles.tagOff,
-                    ]}
+                    <Text
+                      style={[
+                        styles.tag,
+                        (item.version.cvBullets?.length ?? 0) > 0
+                          ? styles.tagOn
+                          : styles.tagOff,
+                      ]}
+                    >
+                      CV {(item.version.cvBullets?.length ?? 0) > 0 ? "✓" : "—"}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.tag,
+                        item.version.coverLetter?.trim()
+                          ? styles.tagOn
+                          : styles.tagOff,
+                      ]}
+                    >
+                      CL {item.version.coverLetter?.trim() ? "✓" : "—"}
+                    </Text>
+
+                    {hasScore && (
+                      <Text style={[styles.tag, strengthBadgeStyle(score)]}>
+                        Strength Score {score}%
+                      </Text>
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.actions}>
+                  <TouchableOpacity
+                    style={styles.exportBtn}
+                    onPress={() => handleExport(item.version)}
                   >
-                    CL {item.version.coverLetter?.trim() ? "✓" : "—"}
-                  </Text>
+                    <Text style={styles.exportText}>Export</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={() =>
+                      onEditVersion(item.rootWorkspaceId, item.version.id)
+                    }
+                  >
+                    <Text style={styles.editText}>Edit</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
-
-              <View style={styles.actions}>
-                <TouchableOpacity
-                  style={styles.exportBtn}
-                  onPress={() => handleExport(item.version)}
-                >
-                  <Text style={styles.exportText}>Export</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.editBtn}
-                  onPress={() =>
-                    onEditVersion(item.rootWorkspaceId, item.version.id)
-                  }
-                >
-                  <Text style={styles.editText}>Edit</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
+            );
+          })
         )}
       </ScrollView>
     </View>
@@ -315,6 +380,10 @@ const styles = StyleSheet.create({
   },
   tagOn: { backgroundColor: "#CCFBF1", color: "#115E59" },
   tagOff: { backgroundColor: "#F3F4F6", color: "#6B7280" },
+
+  strengthTagStrong: { backgroundColor: "#DCFCE7", color: "#166534" },
+  strengthTagGood: { backgroundColor: "#FEF3C7", color: "#854D0E" },
+  strengthTagWeak: { backgroundColor: "#FFE4E6", color: "#9F1239" },
 
   actions: { justifyContent: "center", gap: 10 },
   exportBtn: {

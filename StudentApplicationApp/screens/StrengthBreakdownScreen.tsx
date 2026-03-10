@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Screen } from "../App";
 import {
   View,
@@ -6,51 +7,68 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  ActivityIndicator,
 } from "react-native";
+import { strengthStorageKey, type StrengthResult } from "../lib/gemini";
 
 interface StrengthBreakdownScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
   applicationId: string;
+  strengthApplicationId: string;
   company?: string;
   role?: string;
 }
 
-type StrengthLevel = "weak" | "good" | "strong";
-
-type BadgePalette = {
-  backgroundColour: string;
-  textColour: string;
-  label: string;
-};
-
-const strengthPercentage = 55;
-
-const strengthLevel: StrengthLevel = "good";
-
-const badgePaletteByLevel: Record<StrengthLevel, BadgePalette> = {
-  strong: {
-    backgroundColour: "#DCFCE7",
-    textColour: "#166534",
-    label: "Strong",
-  },
-  good: { backgroundColour: "#FEF3C7", textColour: "#854D0E", label: "Good" },
-  weak: { backgroundColour: "#FFE4E6", textColour: "#9F1239", label: "Weak" },
-};
-
-const strengthBadge = badgePaletteByLevel[strengthLevel];
-
-const strengthBarFillColour = "#F59E0B";
-const strengthBarEmptyColour = "#E9D5FF";
-
 export function StrengthBreakdownScreen({
   onNavigate,
   applicationId,
+  strengthApplicationId,
   company,
   role,
 }: StrengthBreakdownScreenProps) {
+  const [result, setResult] = useState<StrengthResult | null>(null);
+  const [loading, setLoading] = useState(true);
+
   const displayCompany = company?.trim() || "Company not set";
   const displayRole = role?.trim() || "Role not set";
-  const subtitle = `${displayCompany} • ${displayRole}`;
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(
+          strengthStorageKey(strengthApplicationId),
+        );
+        if (raw) setResult(JSON.parse(raw) as StrengthResult);
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
+  }, [strengthApplicationId]);
+
+  const overall = result?.overall ?? 0;
+
+  const strengthLevel =
+    overall >= 75 ? "Strong" : overall >= 45 ? "Good" : "Weak";
+
+  const badgePalette = {
+    Strong: { bg: "#DCFCE7", text: "#166534" },
+    Good: { bg: "#FEF3C7", text: "#854D0E" },
+    Weak: { bg: "#FFE4E6", text: "#9F1239" },
+  }[strengthLevel];
+
+  const barColour =
+    overall >= 75 ? "#22C55E" : overall >= 45 ? "#F59E0B" : "#EF4444";
+
+  const filledBars = Math.ceil(overall / 20);
+
+  const componentBarColour = (score: number) => {
+    if (score >= 75) return "#22C55E";
+    if (score >= 45) return "#F59E0B";
+    return "#EF4444";
+  };
 
   return (
     <View style={styles.container}>
@@ -64,7 +82,9 @@ export function StrengthBreakdownScreen({
 
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>Application strength breakdown</Text>
-          <Text style={styles.headerSubtitle}>{subtitle}</Text>
+          <Text style={styles.headerSubtitle}>
+            {displayCompany} • {displayRole}
+          </Text>
         </View>
       </View>
 
@@ -72,196 +92,226 @@ export function StrengthBreakdownScreen({
         style={styles.scrollView}
         contentContainerStyle={styles.content}
       >
-        <View style={styles.strengthCard}>
-          <Text style={styles.strengthPercentage}>{strengthPercentage}%</Text>
-          <Text style={styles.strengthLabel}>Application strength</Text>
-
-          <View style={styles.levelTag}>
-            <Text style={styles.levelTagText}>{strengthBadge.label}</Text>
+        {loading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator color="#9333EA" />
+            <Text style={styles.loadingText}>Loading score…</Text>
           </View>
+        ) : !result ? (
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyIcon}>📊</Text>
+            <Text style={styles.emptyTitle}>No score yet</Text>
+            <Text style={styles.emptyText}>
+              Complete and save your application to calculate your application
+              strength.
+            </Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.strengthCard}>
+              <Text style={styles.strengthPercentage}>{overall}%</Text>
+              <Text style={styles.strengthLabel}>Application strength</Text>
 
-          <View style={styles.segmentBlock}>
-            <View style={styles.segmentRow}>
-              <View style={[styles.segment, styles.segmentFilled]} />
-              <View style={[styles.segment, styles.segmentFilled]} />
-              <View style={[styles.segment, styles.segmentFilled]} />
-              <View style={[styles.segment, styles.segmentEmpty]} />
-              <View style={[styles.segment, styles.segmentEmpty]} />
+              <View
+                style={[styles.levelTag, { backgroundColor: badgePalette.bg }]}
+              >
+                <Text
+                  style={[styles.levelTagText, { color: badgePalette.text }]}
+                >
+                  {strengthLevel}
+                </Text>
+              </View>
+
+              <View style={styles.segmentBlock}>
+                <View style={styles.segmentRow}>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.segment,
+                        {
+                          backgroundColor:
+                            i <= filledBars ? barColour : "#E9D5FF",
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+
+                <View style={styles.segmentLabels}>
+                  <View
+                    style={[styles.segmentLabelCol, styles.segmentLabelLeft]}
+                  >
+                    <Text style={styles.segmentLabel}>Weak</Text>
+                  </View>
+                  <View
+                    style={[styles.segmentLabelCol, styles.segmentLabelCentre]}
+                  >
+                    <Text style={styles.segmentLabel}>Good</Text>
+                  </View>
+                  <View
+                    style={[styles.segmentLabelCol, styles.segmentLabelRight]}
+                  >
+                    <Text style={styles.segmentLabel}>Strong</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.explanationCard}>
+                <Text style={styles.explanationText}>{result.explanation}</Text>
+              </View>
+
+              <View style={styles.changeCard}>
+                <Text style={styles.changeTitle}>Why your score changed</Text>
+                {result.changes.map((change, changeIndex) => (
+                  <View key={changeIndex} style={styles.changeRow}>
+                    <Text style={styles.changeIcon}>↗</Text>
+                    <Text style={styles.changeText}>
+                      <Text style={styles.changeHighlight}>
+                        +{change.points} pts:
+                      </Text>
+                      {change.reason}
+                    </Text>
+                  </View>
+                ))}
+              </View>
             </View>
 
-            <View style={styles.segmentLabels}>
-              <View style={[styles.segmentLabelCol, styles.segmentLabelLeft]}>
-                <Text style={styles.segmentLabel}>Weak</Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Score breakdown</Text>
+
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.flex1}>
+                    <Text style={styles.cardTitle}>Role alignment</Text>
+                    <Text style={styles.cardDetail}>
+                      How well your cover letter and bullet points address the
+                      job requirements
+                    </Text>
+                  </View>
+                  <Text style={styles.cardValue}>
+                    {result.components.roleAlignment}%
+                  </Text>
+                </View>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${result.components.roleAlignment}%`,
+                        backgroundColor: componentBarColour(
+                          result.components.roleAlignment,
+                        ),
+                      },
+                    ]}
+                  />
+                </View>
               </View>
 
-              <View style={[styles.segmentLabelCol, styles.segmentLabelCentre]}>
-                <Text style={styles.segmentLabel}>Good</Text>
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.flex1}>
+                    <Text style={styles.cardTitle}>Evidence quality</Text>
+                    <Text style={styles.cardDetail}>
+                      Strength of examples and use of metrics to support your
+                      application
+                    </Text>
+                  </View>
+                  <Text style={styles.cardValue}>
+                    {result.components.evidenceQuality}%
+                  </Text>
+                </View>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${result.components.evidenceQuality}%`,
+                        backgroundColor: componentBarColour(
+                          result.components.evidenceQuality,
+                        ),
+                      },
+                    ]}
+                  />
+                </View>
               </View>
 
-              <View style={[styles.segmentLabelCol, styles.segmentLabelRight]}>
-                <Text style={styles.segmentLabel}>Strong</Text>
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.flex1}>
+                    <Text style={styles.cardTitle}>Cover letter structure</Text>
+                    <Text style={styles.cardDetail}>
+                      Clarity of motivation, achievements, fit for the role and
+                      research on the company.
+                    </Text>
+                  </View>
+                  <Text style={styles.cardValue}>
+                    {result.components.coverLetterStructure}%
+                  </Text>
+                </View>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${result.components.coverLetterStructure}%`,
+                        backgroundColor: componentBarColour(
+                          result.components.coverLetterStructure,
+                        ),
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.flex1}>
+                    <Text style={styles.cardTitle}>
+                      Personalisation to company
+                    </Text>
+                    <Text style={styles.cardDetail}>
+                      Genuine integration of company values and culture
+                    </Text>
+                  </View>
+                  <Text style={styles.cardValue}>
+                    {result.components.companyPersonalisation}%
+                  </Text>
+                </View>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${result.components.companyPersonalisation}%`,
+                        backgroundColor: componentBarColour(
+                          result.components.companyPersonalisation,
+                        ),
+                      },
+                    ]}
+                  />
+                </View>
               </View>
             </View>
-          </View>
 
-          <View style={styles.changeCard}>
-            <Text style={styles.changeTitle}>Why your score changed</Text>
+            <View style={styles.actionCard}>
+              <View style={styles.actionIconWrap}>
+                <Text style={styles.actionIconText}>✓</Text>
+              </View>
+              <View style={styles.flex1}>
+                <Text style={styles.actionLabel}>Most impactful next step</Text>
+                <Text style={styles.actionText}>{result.nextAction}</Text>
+              </View>
+            </View>
 
-            <View style={styles.changeRow}>
-              <Text style={styles.changeIcon}>↗</Text>
-              <Text style={styles.changeText}>
-                <Text style={styles.changeHighlight}>+15 points:</Text> Mapped
-                evidence to React requirement with a solid STAR example
+            {result.calculatedAt && (
+              <Text style={styles.timestamp}>
+                Last calculated:
+                {new Date(result.calculatedAt).toLocaleString()}
               </Text>
-            </View>
-
-            <View style={styles.changeRow}>
-              <Text style={styles.changeIcon}>↗</Text>
-              <Text style={styles.changeText}>
-                <Text style={styles.changeHighlight}>+10 points:</Text>
-                Completed REST APIs requirement mapping
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Score breakdown</Text>
-
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.flex1}>
-                <Text style={styles.cardTitle}>Requirements coverage</Text>
-                <Text style={styles.cardDetail}>
-                  You’ve mapped evidence to 6 out of 8 requirements
-                </Text>
-              </View>
-              <Text style={styles.cardValue}>75%</Text>
-            </View>
-
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  styles.progressFill75,
-                  styles.progressOrange,
-                ]}
-              />
-            </View>
-
-            <View style={styles.actionBox}>
-              <View style={styles.actionIconWrap}>
-                <Text style={styles.actionIcon}>✓</Text>
-              </View>
-              <View style={styles.flex1}>
-                <Text style={styles.actionLabel}>Next action</Text>
-                <Text style={styles.actionText}>
-                  Map evidence to the remaining 2 requirements
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.flex1}>
-                <Text style={styles.cardTitle}>Evidence quality</Text>
-                <Text style={styles.cardDetail}>
-                  Most examples include metrics and clear impact
-                </Text>
-              </View>
-              <Text style={styles.cardValue}>62%</Text>
-            </View>
-
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  styles.progressFill62,
-                  styles.progressOrange,
-                ]}
-              />
-            </View>
-
-            <View style={styles.actionBox}>
-              <View style={styles.actionIconWrap}>
-                <Text style={styles.actionIcon}>✓</Text>
-              </View>
-              <View style={styles.flex1}>
-                <Text style={styles.actionLabel}>Next action</Text>
-                <Text style={styles.actionText}>
-                  Add 1 or 2 metrics to the weaker examples
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.flex1}>
-                <Text style={styles.cardTitle}>CV tailoring</Text>
-                <Text style={styles.cardDetail}>
-                  Some bullets still are generic for this role
-                </Text>
-              </View>
-              <Text style={styles.cardValue}>48%</Text>
-            </View>
-
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  styles.progressFill48,
-                  styles.progressRed,
-                ]}
-              />
-            </View>
-
-            <View style={styles.actionBox}>
-              <View style={styles.actionIconWrap}>
-                <Text style={styles.actionIcon}>✓</Text>
-              </View>
-              <View style={styles.flex1}>
-                <Text style={styles.actionLabel}>Next action</Text>
-                <Text style={styles.actionText}>
-                  Rewrite 2 bullets using role keywords
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.flex1}>
-                <Text style={styles.cardTitle}>Company research</Text>
-                <Text style={styles.cardDetail}>
-                  Research notes are complete!
-                </Text>
-              </View>
-              <Text style={styles.cardValue}>100%</Text>
-            </View>
-
-            <View style={styles.progressTrack}>
-              <View
-                style={[
-                  styles.progressFill,
-                  styles.progressFill100,
-                  styles.progressGreen,
-                ]}
-              />
-            </View>
-
-            <View style={styles.actionBox}>
-              <View style={styles.actionIconWrap}>
-                <Text style={styles.actionIcon}>✓</Text>
-              </View>
-              <View style={styles.flex1}>
-                <Text style={styles.actionLabel}>Next action</Text>
-                <Text style={styles.actionText}>Review Notes</Text>
-              </View>
-            </View>
-          </View>
-        </View>
+            )}
+          </>
+        )}
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -280,7 +330,6 @@ export function StrengthBreakdownScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#FFFFFF" },
-
   flex1: { flex: 1 },
   bottomSpacer: { height: 16 },
 
@@ -301,13 +350,37 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backIcon: { fontSize: 20, color: "#374151" },
-
   headerInfo: { flex: 1, paddingHorizontal: 10 },
   headerTitle: { fontSize: 19, color: "#111827" },
   headerSubtitle: { fontSize: 14, color: "#6B7280", marginTop: 2 },
 
   scrollView: { flex: 1 },
   content: { paddingBottom: 10 },
+
+  loadingWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingTop: 80,
+  },
+  loadingText: { fontSize: 14, color: "#6B7280" },
+
+  emptyWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 80,
+    paddingHorizontal: 40,
+    gap: 12,
+  },
+  emptyIcon: { fontSize: 48 },
+  emptyTitle: { fontSize: 18, color: "#111827" },
+  emptyText: {
+    fontSize: 14,
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 20,
+  },
 
   strengthCard: {
     backgroundColor: "#F3E8FF",
@@ -339,13 +412,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderWidth: 1,
     borderColor: "rgba(0,0,0,0.04)",
-    backgroundColor: strengthBadge.backgroundColour,
   },
-  levelTagText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: strengthBadge.textColour,
-  },
+  levelTagText: { fontSize: 12, fontWeight: "600" },
 
   segmentBlock: { marginTop: 14, paddingHorizontal: 10 },
   segmentRow: {
@@ -355,9 +423,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   segment: { flex: 1, height: 10, borderRadius: 999 },
-  segmentFilled: { backgroundColor: strengthBarFillColour },
-  segmentEmpty: { backgroundColor: strengthBarEmptyColour },
-
   segmentLabels: {
     flexDirection: "row",
     marginTop: 10,
@@ -369,8 +434,18 @@ const styles = StyleSheet.create({
   segmentLabelRight: { alignItems: "flex-end" },
   segmentLabel: { fontSize: 12, color: "#6B7280" },
 
+  explanationCard: {
+    marginTop: 14,
+    backgroundColor: "rgba(255,255,255,0.6)",
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.9)",
+  },
+  explanationText: { fontSize: 13, color: "#4C1D95", lineHeight: 18 },
+
   changeCard: {
-    marginTop: 16,
+    marginTop: 12,
     backgroundColor: "rgba(255,255,255,0.7)",
     borderRadius: 14,
     padding: 14,
@@ -418,37 +493,40 @@ const styles = StyleSheet.create({
   },
   progressFill: { height: "100%", borderRadius: 999 },
 
-  progressFill75: { width: "75%" },
-  progressFill62: { width: "62%" },
-  progressFill48: { width: "48%" },
-  progressFill100: { width: "100%" },
-  progressGreen: { backgroundColor: "#22C55E" },
-  progressOrange: { backgroundColor: "#F59E0B" },
-  progressRed: { backgroundColor: "#EF4444" },
-
-  actionBox: {
+  actionCard: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-    padding: 12,
-    borderRadius: 12,
+    gap: 12,
+    marginHorizontal: 24,
+    marginTop: 8,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 14,
     backgroundColor: "#ECFEFF",
     borderWidth: 1,
     borderColor: "#CFFAFE",
+    alignItems: "flex-start",
   },
   actionIconWrap: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#14B8A6",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 1,
   },
-  actionIcon: { color: "#0F766E", fontSize: 12, fontWeight: "700" },
+  actionIconText: { color: "#0F766E", fontSize: 12, fontWeight: "700" },
   actionLabel: { fontSize: 12, color: "#115E59", fontWeight: "600" },
   actionText: { fontSize: 12, color: "#115E59", marginTop: 4, lineHeight: 16 },
+
+  timestamp: {
+    fontSize: 11,
+    color: "#9CA3AF",
+    textAlign: "center",
+    marginTop: 4,
+    marginBottom: 8,
+  },
 
   footer: {
     paddingHorizontal: 24,

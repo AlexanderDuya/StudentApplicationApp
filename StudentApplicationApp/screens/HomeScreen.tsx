@@ -50,7 +50,7 @@ export function HomeScreen({
 
     for (const [rootId, family] of byRoot.entries()) {
       const latestWorkspace = [...family].sort(
-        (a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)
+        (a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0),
       )[0];
 
       const company = latestWorkspace.company?.trim() || "Company not set";
@@ -79,8 +79,6 @@ export function HomeScreen({
 
   const latest = activeApps[0];
 
-  const goLibrary = () => onNavigate("application-library");
-
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
@@ -103,7 +101,7 @@ export function HomeScreen({
                       style: "destructive",
                       onPress: onClearAll,
                     },
-                  ]
+                  ],
                 )
               }
               style={styles.resetButton}
@@ -146,7 +144,11 @@ export function HomeScreen({
                     {latest.company} • {latest.role}
                   </Text>
 
-                  <TouchableOpacity onPress={goLibrary}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      onNavigate("application-library", latest.rootId)
+                    }
+                  >
                     <Text style={styles.nextStepButton}>
                       Open application library →
                     </Text>
@@ -189,13 +191,13 @@ export function HomeScreen({
           <View style={styles.applicationsList}>
             {activeApps.length === 0 ? (
               <Text style={styles.emptyText}>
-                You don’t have any active applications yet.
+                You don't have any active applications yet.
               </Text>
             ) : (
               activeApps.map((app) => (
                 <TouchableOpacity
                   key={app.rootId}
-                  onPress={goLibrary}
+                  onPress={() => onNavigate("application-library", app.rootId)}
                   style={styles.applicationCard}
                 >
                   <View style={styles.cardHeader}>
@@ -225,7 +227,7 @@ export function HomeScreen({
               completedApps.map((app) => (
                 <TouchableOpacity
                   key={app.rootId}
-                  onPress={goLibrary}
+                  onPress={() => onNavigate("application-library", app.rootId)}
                   style={[styles.applicationCard, styles.completedCard]}
                 >
                   <View style={styles.cardHeader}>

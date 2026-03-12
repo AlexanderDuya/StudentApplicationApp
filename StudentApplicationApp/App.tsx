@@ -23,6 +23,7 @@ import { ProgressCompetencyScreen } from "./screens/CompetencyProgressScreen";
 import { CommunityScreen } from "./screens/CommunityScreen";
 import { ProfileScreen } from "./screens/ProfileScreen";
 import { StrengthBreakdownScreen } from "./screens/StrengthBreakdownScreen";
+import { NotificationReminderScreen } from "./screens/NotificationReminderScreen";
 
 export type Screen =
   | "home"
@@ -38,7 +39,8 @@ export type Screen =
   | "tailor-cover-letter"
   | "company-research"
   | "application-library"
-  | "strength-breakdown";
+  | "strength-breakdown"
+  | "notification-reminder";
 
 export type RequirementType = "must-have" | "nice-to-have";
 
@@ -104,7 +106,6 @@ const LAST_WORKSPACE_ID_KEY = "lastWorkspaceId:v1";
 
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-// prevent versions from having same ref, making copy
 const deepClone = <T,>(value: T): T => {
   try {
     if (typeof globalThis.structuredClone === "function") {
@@ -299,7 +300,10 @@ export default function App() {
         return <CommunityScreen />;
 
       case "profile":
-        return <ProfileScreen />;
+        return <ProfileScreen onNavigate={navigate} />;
+
+      case "notification-reminder":
+        return <NotificationReminderScreen onNavigate={navigate} />;
 
       case "workspace-overview": {
         if (!selectedApplicationId) {
@@ -478,8 +482,8 @@ export default function App() {
               setWorkspaces((prev) =>
                 prev.map((w) => {
                   const current = prev.find((x) => x.id === workspaceId);
-                  const rootId = current?.rootId ?? current?.id;
-                  if (w.id !== rootId) return w;
+                  const currentRootId = current?.rootId ?? current?.id;
+                  if (w.id !== currentRootId) return w;
 
                   const now = Date.now();
                   const version: ApplicationVersion = {

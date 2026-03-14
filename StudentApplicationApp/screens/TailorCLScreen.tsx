@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Modal,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
 import type { Screen } from "../App";
 import {
@@ -172,7 +173,12 @@ export function TailorCoverLetterScreen({
       </View>
 
       <View style={styles.noticeCard}>
-        <Text style={styles.noticeIcon}>✍️</Text>
+        <Feather
+          name="edit-2"
+          size={16}
+          color="#134E4A"
+          style={styles.noticeIcon}
+        />
         <Text style={styles.noticeText}>
           Write a cover letter that matches the
           <Text style={styles.noticeBold}> role, company, and keywords </Text>
@@ -219,7 +225,7 @@ export function TailorCoverLetterScreen({
         <View style={styles.feedbackCard}>
           <View style={styles.feedbackHeader}>
             <View style={styles.feedbackIcon}>
-              <Text style={styles.feedbackIconText}>💡</Text>
+              <Feather name="zap" size={16} color="#FFFFFF" />
             </View>
 
             <View style={{ flex: 1 }}>
@@ -371,7 +377,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#99F6E4",
   },
-  noticeIcon: { fontSize: 16, marginTop: 2 },
+  noticeIcon: { marginTop: 2, marginRight: 4 },
   noticeText: { flex: 1, fontSize: 12, color: "#134E4A", lineHeight: 16 },
   noticeBold: { fontWeight: "700" },
 

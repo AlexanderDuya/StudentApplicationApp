@@ -8,6 +8,7 @@ import {
   TextInput,
   StyleSheet,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import {
   extractJobDescriptionFromUrl,
   extractRequirementsFromJobDescription,
@@ -150,7 +151,7 @@ export function AddApplicationScreen({
 
     if (!isValidHttpUrl(trimmedUrl)) {
       setError(
-        "That link doesn’t look valid. Please check it, or paste the job description manually instead.",
+        "That link doesn't look valid. Please check it, or paste the job description manually instead.",
       );
       return;
     }
@@ -159,7 +160,7 @@ export function AddApplicationScreen({
     const existingId = findWorkspaceIdByJobUrl(trimmedUrl);
     if (existingId) {
       setDuplicateWorkspaceId(existingId);
-      setError("Looks like you’ve already added this job.");
+      setError("Looks like you've already added this job.");
       return;
     }
 
@@ -168,7 +169,7 @@ export function AddApplicationScreen({
       const ok = await checkUrlReachable(trimmedUrl);
       if (!ok) {
         setError(
-          "We couldn’t access that job link right now. No stress, you can paste the job description manually instead.",
+          "We couldn't access that job link right now. No stress, you can paste the job description manually instead.",
         );
         return;
       }
@@ -213,7 +214,7 @@ export function AddApplicationScreen({
       }
     } catch {
       setError(
-        "We couldn’t reach that link (it might be blocked or offline). You can paste the job description manually instead.",
+        "We couldn't reach that link (it might be blocked or offline). You can paste the job description manually instead.",
       );
     } finally {
       setIsChecking(false);
@@ -253,7 +254,12 @@ export function AddApplicationScreen({
               </Text>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.inputIcon}>🔗</Text>
+                <Feather
+                  name="link"
+                  size={20}
+                  color="#6B7280"
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   value={jobUrl}
                   onChangeText={(v) => {
@@ -347,7 +353,12 @@ export function AddApplicationScreen({
               Company name <Text style={styles.required}>*</Text>
             </Text>
             <View style={styles.inputContainer}>
-              <Text style={styles.inputIcon}>🏢</Text>
+              <Feather
+                name="globe"
+                size={20}
+                color="#6B7280"
+                style={styles.inputIcon}
+              />
               <TextInput
                 value={company}
                 onChangeText={(v) => {
@@ -366,7 +377,12 @@ export function AddApplicationScreen({
               Role name <Text style={styles.required}>*</Text>
             </Text>
             <View style={styles.inputContainer}>
-              <Text style={styles.inputIcon}>💼</Text>
+              <Feather
+                name="briefcase"
+                size={20}
+                color="#6B7280"
+                style={styles.inputIcon}
+              />
               <TextInput
                 value={role}
                 onChangeText={(v) => {
@@ -439,7 +455,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backIcon: { fontSize: 20, color: "#374151" },
-  headerTitle: { fontSize: 20, fontWeight: "600", color: "#111827" },
+  headerTitle: { fontSize: 20, color: "#111827" },
   headerSpacer: { width: 40 },
 
   scrollView: { flex: 1 },
@@ -465,7 +481,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: "#FFFFFF",
   },
-  inputIcon: { fontSize: 20, marginRight: 12 },
+  inputIcon: { marginRight: 12 },
   input: {
     flex: 1,
     paddingVertical: 16,

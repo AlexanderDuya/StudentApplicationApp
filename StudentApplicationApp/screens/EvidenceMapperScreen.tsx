@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TextInput,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { Screen } from "../App";
 import type {
   Requirement as ApiRequirement,
@@ -143,7 +144,12 @@ export function EvidenceMapperScreen({
       </View>
 
       <View style={styles.progressCard}>
-        <Text style={styles.progressIcon}>📈</Text>
+        <Feather
+          name="trending-up"
+          size={20}
+          color="#9333EA"
+          style={styles.progressIcon}
+        />
         <View style={styles.progressInfo}>
           <Text style={styles.progressText}>
             {mappedCount} of {totalCount} requirements mapped
@@ -167,7 +173,7 @@ export function EvidenceMapperScreen({
               • Be specific with examples from projects, coursework, or work
             </Text>
             <Text style={styles.infoItem}>
-              Evidence mapped will increase confidence!
+              • Evidence mapped will increase confidence!
             </Text>
           </View>
         </View>
@@ -185,9 +191,11 @@ export function EvidenceMapperScreen({
                   onPress={() => setExpandedReq(isExpanded ? null : req.id)}
                   style={styles.requirementHeader}
                 >
-                  <Text style={styles.requirementIcon}>
-                    {mapped ? "✅" : "⭕"}
-                  </Text>
+                  <Feather
+                    name={mapped ? "check-circle" : "circle"}
+                    size={24}
+                    color={mapped ? "#10B981" : "#D1D5DB"}
+                  />
 
                   <View style={styles.requirementInfo}>
                     <Text style={styles.requirementTitle}>{req.title}</Text>
@@ -369,7 +377,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#F3E8FF",
   },
-  progressIcon: { fontSize: 20 },
+  progressIcon: { marginRight: 12 },
   progressInfo: { flex: 1 },
   progressText: { fontSize: 14, color: "#581C87", marginBottom: 4 },
   progressBarBg: {
@@ -411,7 +419,6 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
   },
-  requirementIcon: { fontSize: 24 },
   requirementInfo: { flex: 1 },
   requirementTitle: { fontSize: 16, color: "#111827", marginBottom: 4 },
 
@@ -463,7 +470,7 @@ const styles = StyleSheet.create({
   typeBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   mustHaveBadge: { backgroundColor: "#FEE2E2" },
   niceToHaveBadge: { backgroundColor: "#DBEAFE" },
-  typeBadgeText: { fontSize: 12, fontWeight: "600" },
+  typeBadgeText: { fontSize: 12 },
   mustHaveText: { color: "#991B1B" },
   niceToHaveText: { color: "#1E40AF" },
 });

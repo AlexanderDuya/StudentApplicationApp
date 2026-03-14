@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import type { Screen, Workspace } from "../App";
 
 interface HomeScreenProps {
@@ -135,7 +136,7 @@ export function HomeScreen({
             <View style={styles.nextStepCard}>
               <View style={styles.nextStepContent}>
                 <View style={styles.nextStepIcon}>
-                  <Text style={styles.nextStepIconText}>📌</Text>
+                  <Feather name="bookmark" size={20} color="#FFFFFF" />
                 </View>
 
                 <View style={styles.nextStepText}>
@@ -160,7 +161,7 @@ export function HomeScreen({
             <View style={styles.nextStepCard}>
               <View style={styles.nextStepContent}>
                 <View style={styles.nextStepIcon}>
-                  <Text style={styles.nextStepIconText}>✨</Text>
+                  <Feather name="star" size={20} color="#FFFFFF" />
                 </View>
                 <View style={styles.nextStepText}>
                   <Text style={styles.nextStepTitle}>No applications yet</Text>
@@ -310,7 +311,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  nextStepIconText: { fontSize: 20 },
   nextStepText: { flex: 1 },
   nextStepTitle: {
     color: "#581C87",

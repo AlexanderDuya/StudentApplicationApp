@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
   },
   backIcon: { fontSize: 20, color: "#374151" },
   headerInfo: { flex: 1, paddingHorizontal: 10 },
-  headerTitle: { fontSize: 19, color: "#111827" },
+  headerTitle: { fontSize: 20, color: "#111827" },
   headerSubtitle: { fontSize: 14, color: "#6B7280", marginTop: 2 },
 
   scrollView: { flex: 1 },
@@ -392,7 +392,6 @@ const styles = StyleSheet.create({
   },
   strengthPercentage: {
     fontSize: 50,
-    fontWeight: "300",
     color: "#581C87",
     textAlign: "center",
     marginTop: 6,

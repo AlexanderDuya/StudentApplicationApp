@@ -7,6 +7,7 @@ import {
   StyleSheet,
   StatusBar,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 import { HomeScreen } from "./screens/HomeScreen";
@@ -586,14 +587,12 @@ export default function App() {
               onPress={() => navigate("home")}
               style={styles.navButton}
             >
-              <Text
-                style={[
-                  styles.navIcon,
-                  currentScreen === "home" && styles.navIconActive,
-                ]}
-              >
-                🏠
-              </Text>
+              <Feather
+                name="home"
+                size={22}
+                color={currentScreen === "home" ? "#14B8A6" : "#9CA3AF"}
+                style={styles.navIcon}
+              />
               <Text
                 style={[
                   styles.navText,
@@ -608,14 +607,14 @@ export default function App() {
               onPress={() => navigate("add-application")}
               style={styles.navButton}
             >
-              <Text
-                style={[
-                  styles.navIcon,
-                  currentScreen === "add-application" && styles.navIconActive,
-                ]}
-              >
-                ➕
-              </Text>
+              <Feather
+                name="plus"
+                size={22}
+                color={
+                  currentScreen === "add-application" ? "#14B8A6" : "#9CA3AF"
+                }
+                style={styles.navIcon}
+              />
               <Text
                 style={[
                   styles.navText,
@@ -630,15 +629,16 @@ export default function App() {
               onPress={() => navigate("progress-competency")}
               style={styles.navButton}
             >
-              <Text
-                style={[
-                  styles.navIcon,
-                  currentScreen === "progress-competency" &&
-                    styles.navIconActive,
-                ]}
-              >
-                📈
-              </Text>
+              <Feather
+                name="trending-up"
+                size={22}
+                color={
+                  currentScreen === "progress-competency"
+                    ? "#14B8A6"
+                    : "#9CA3AF"
+                }
+                style={styles.navIcon}
+              />
               <Text
                 style={[
                   styles.navText,
@@ -654,14 +654,12 @@ export default function App() {
               onPress={() => navigate("community")}
               style={styles.navButton}
             >
-              <Text
-                style={[
-                  styles.navIcon,
-                  currentScreen === "community" && styles.navIconActive,
-                ]}
-              >
-                💬
-              </Text>
+              <Feather
+                name="message-circle"
+                size={22}
+                color={currentScreen === "community" ? "#14B8A6" : "#9CA3AF"}
+                style={styles.navIcon}
+              />
               <Text
                 style={[
                   styles.navText,
@@ -676,14 +674,12 @@ export default function App() {
               onPress={() => navigate("profile")}
               style={styles.navButton}
             >
-              <Text
-                style={[
-                  styles.navIcon,
-                  currentScreen === "profile" && styles.navIconActive,
-                ]}
-              >
-                👤
-              </Text>
+              <Feather
+                name="user"
+                size={22}
+                color={currentScreen === "profile" ? "#14B8A6" : "#9CA3AF"}
+                style={styles.navIcon}
+              />
               <Text
                 style={[
                   styles.navText,
@@ -718,8 +714,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 8,
   },
-  navIcon: { fontSize: 22, marginBottom: 2, opacity: 0.6 },
-  navIconActive: { opacity: 1 },
+  navIcon: { marginBottom: 2 },
   navText: { fontSize: 10, color: "#9CA3AF", marginTop: 2 },
   navTextActive: { color: "#14B8A6", fontWeight: "600" },
 });

@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { strengthStorageKey, type StrengthResult } from "../lib/gemini";
 
 export interface WorkspaceOverviewScreenProps {
@@ -315,9 +316,11 @@ export function WorkspaceOverviewScreen({
               }}
               style={styles.stepItem}
             >
-              <Text style={styles.stepIcon}>
-                {step.completed ? "✅" : "⭕"}
-              </Text>
+              <Feather
+                name={step.completed ? "check-circle" : "circle"}
+                size={24}
+                color={step.completed ? "#10B981" : "#D1D5DB"}
+              />
 
               <View style={styles.stepText}>
                 <Text
@@ -463,7 +466,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 8,
   },
-  stepIcon: { fontSize: 24 },
   stepText: { flex: 1 },
   stepTitle: { fontSize: 14, color: "#111827" },
   stepTitleCompleted: { color: "#6B7280", textDecorationLine: "line-through" },

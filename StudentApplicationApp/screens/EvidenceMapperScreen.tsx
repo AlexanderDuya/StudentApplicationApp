@@ -107,22 +107,22 @@ export function EvidenceMapperScreen({
     return { bg: "#FFEDD5", text: "#9A3412" };
   };
 
-  const updateEvidence = (
+  const handleEvidenceChange = (
     reqId: string,
     field: keyof EvidenceInputs,
     value: string,
   ) => {
-    const prev = evidenceRef.current;
-    const next: EvidenceByReq = {
-      ...prev,
+    const previousEvidence = evidenceRef.current;
+    const nextEvidence: EvidenceByReq = {
+      ...previousEvidence,
       [reqId]: {
-        ...(prev[reqId] ?? emptyEvidence()),
+        ...(previousEvidence[reqId] ?? emptyEvidence()),
         [field]: value,
       },
     };
 
-    setEvidenceByReq(next);
-    onSaveEvidenceByReq(applicationId, next);
+    setEvidenceByReq(nextEvidence);
+    onSaveEvidenceByReq(applicationId, nextEvidence);
   };
 
   return (
@@ -272,8 +272,8 @@ export function EvidenceMapperScreen({
                       <Text style={styles.evidenceLabel}>Situation</Text>
                       <TextInput
                         value={ev.situation}
-                        onChangeText={(t) =>
-                          updateEvidence(req.id, "situation", t)
+                        onChangeText={(text) =>
+                          handleEvidenceChange(req.id, "situation", text)
                         }
                         placeholder="e.g., Built a task management app for coursework"
                         placeholderTextColor="#9CA3AF"
@@ -286,7 +286,9 @@ export function EvidenceMapperScreen({
                       <Text style={styles.evidenceLabel}>Task</Text>
                       <TextInput
                         value={ev.task}
-                        onChangeText={(t) => updateEvidence(req.id, "task", t)}
+                        onChangeText={(text) =>
+                          handleEvidenceChange(req.id, "task", text)
+                        }
                         placeholder="e.g., Create interactive UI with real-time updates"
                         placeholderTextColor="#9CA3AF"
                         style={styles.input}
@@ -298,8 +300,8 @@ export function EvidenceMapperScreen({
                       <Text style={styles.evidenceLabel}>Action</Text>
                       <TextInput
                         value={ev.action}
-                        onChangeText={(t) =>
-                          updateEvidence(req.id, "action", t)
+                        onChangeText={(text) =>
+                          handleEvidenceChange(req.id, "action", text)
                         }
                         placeholder="e.g., Used React hooks, state management, and reusable components"
                         placeholderTextColor="#9CA3AF"
@@ -312,8 +314,8 @@ export function EvidenceMapperScreen({
                       <Text style={styles.evidenceLabel}>Result</Text>
                       <TextInput
                         value={ev.result}
-                        onChangeText={(t) =>
-                          updateEvidence(req.id, "result", t)
+                        onChangeText={(text) =>
+                          handleEvidenceChange(req.id, "result", text)
                         }
                         placeholder="e.g., Achieved 95% grade and deployed to 50+ users"
                         placeholderTextColor="#9CA3AF"

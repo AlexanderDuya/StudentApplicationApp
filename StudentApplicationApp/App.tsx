@@ -88,6 +88,8 @@ export type Workspace = {
   rootId?: string;
   isSnapshot?: boolean;
   sourceVersionId?: string;
+  isEditingVersion?: boolean;
+  hasVersionChanges?: boolean;
   jobUrl?: string;
   company?: string;
   role?: string;
@@ -194,6 +196,8 @@ export default function App() {
         rootId: id,
         isSnapshot: false,
         createdAt: now,
+        isEditingVersion: false,
+        hasVersionChanges: false,
         ...data,
         versions: [],
       },
@@ -220,6 +224,8 @@ export default function App() {
       rootId: root.rootId ?? root.id,
       isSnapshot: true,
       sourceVersionId: versionId,
+      isEditingVersion: true,
+      hasVersionChanges: false,
       createdAt: now,
       jobUrl: version.jobUrl ?? root.jobUrl,
       company: version.company ?? root.company,
@@ -386,7 +392,10 @@ export default function App() {
             requirements={ws?.requirements ?? []}
             initialEvidenceByReq={ws?.evidenceByReq ?? {}}
             onSaveEvidenceByReq={(id, evidenceByReq) =>
-              updateWorkspace(id, { evidenceByReq })
+              updateWorkspace(id, {
+                evidenceByReq,
+                hasVersionChanges: true,
+              })
             }
           />
         );
@@ -416,6 +425,7 @@ export default function App() {
             onSaveBullets={(id, bulletPoints) =>
               updateWorkspace(id, { cvBullets: bulletPoints })
             }
+            updateWorkspace={updateWorkspace}
           />
         );
       }
@@ -474,6 +484,9 @@ export default function App() {
             bulletPoints={ws?.cvBullets ?? []}
             initialCoverLetter={ws?.coverLetter ?? ""}
             nextVersionNumber={nextVersionNumber}
+            isEditingVersion={ws?.isEditingVersion}
+            hasVersionChanges={ws?.hasVersionChanges}
+            updateWorkspace={updateWorkspace}
             onSaveNamedVersion={(
               workspaceId,
               versionId,

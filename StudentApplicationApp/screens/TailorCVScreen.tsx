@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { Screen } from "../App";
+import { Screen, Workspace } from "../App";
 import { analyseCvBullet } from "../lib/gemini";
 
 interface TailorCVScreenProps {
@@ -21,6 +21,7 @@ interface TailorCVScreenProps {
   jobDescription?: string;
   initialBullets: string[];
   onSaveBullets?: (applicationId: string, bulletPoints: string[]) => void;
+  updateWorkspace?: (id: string, patch: Partial<Workspace>) => void;
 }
 
 type Bullet = {
@@ -46,6 +47,7 @@ export function TailorCVScreen({
   jobDescription,
   initialBullets,
   onSaveBullets,
+  updateWorkspace,
 }: TailorCVScreenProps) {
   const [bullets, setBullets] = useState<Bullet[]>(() =>
     toBulletState(initialBullets),
@@ -65,7 +67,7 @@ export function TailorCVScreen({
     setActiveId(seeded[0].id);
 
     hydratedForIdRef.current = applicationId;
-  }, [applicationId]);
+  }, [applicationId, initialBullets]);
 
   const [coachTips, setCoachTips] = useState<string[]>([]);
   const [coachLoading, setCoachLoading] = useState(false);
@@ -76,10 +78,16 @@ export function TailorCVScreen({
     [bullets, activeId],
   );
 
+  const markAsChangesMade = () => {
+    updateWorkspace?.(applicationId, { hasVersionChanges: true });
+  };
+
   const updateBullet = (id: string, value: string) => {
     setBullets((prev) =>
       prev.map((b) => (b.id === id ? { ...b, text: value } : b)),
     );
+
+    markAsChangesMade();
 
     if (id === activeId) {
       setCoachTips([]);
@@ -92,6 +100,7 @@ export function TailorCVScreen({
     setBullets((prev) => [...prev, { id, text: "" }]);
     setActiveId(id);
 
+    markAsChangesMade();
     setCoachTips([]);
     setCoachError(null);
   };
@@ -109,6 +118,8 @@ export function TailorCVScreen({
 
       return safeNext;
     });
+
+    markAsChangesMade();
   };
 
   const placeholderForIndex = (idx: number) => {

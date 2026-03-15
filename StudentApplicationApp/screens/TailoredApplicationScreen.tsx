@@ -11,7 +11,12 @@ import * as Print from "expo-print";
 import { shareAsync } from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { Screen, Workspace, ApplicationVersion } from "../App";
+import type {
+  Screen,
+  Workspace,
+  ApplicationVersion,
+  CompanyResearchNotes,
+} from "../App";
 import { strengthStorageKey, type StrengthResult } from "../lib/gemini";
 
 interface ApplicationLibraryScreenProps {
@@ -20,6 +25,12 @@ interface ApplicationLibraryScreenProps {
   rootApplicationId?: string;
   onEditVersion: (rootWorkspaceId: string, versionId: string) => void;
 }
+
+const hasResearchContent = (research?: CompanyResearchNotes) =>
+  !!research?.whatDoesCompanyDo?.trim() ||
+  !!research?.recentNews?.trim() ||
+  !!research?.cultureValues?.trim() ||
+  !!research?.whyWorkHere?.trim();
 
 const buildHtml = (version: ApplicationVersion) => `<!DOCTYPE html>
 <html lang="en">
@@ -65,13 +76,7 @@ ${version.coverLetter?.trim() ? version.coverLetter : "Not Completed Yet"}
 const getMissingSections = (version: ApplicationVersion) => {
   const missing: string[] = [];
 
-  const r = version.companyResearch;
-  const researchComplete =
-    !!r?.whatDoesCompanyDo?.trim() ||
-    !!r?.recentNews?.trim() ||
-    !!r?.cultureValues?.trim() ||
-    !!r?.whyWorkHere?.trim();
-
+  const researchComplete = hasResearchContent(version.companyResearch);
   const cvComplete = (version.cvBullets?.length ?? 0) > 0;
   const coverComplete = !!version.coverLetter?.trim();
 
@@ -262,6 +267,9 @@ export function ApplicationLibraryScreen({
           items.map((item) => {
             const score = strengthScores[item.version.id];
             const hasScore = score !== undefined;
+            const researchComplete = hasResearchContent(
+              item.version.companyResearch,
+            );
 
             return (
               <View key={item.version.id} style={styles.card}>
@@ -278,12 +286,10 @@ export function ApplicationLibraryScreen({
                     <Text
                       style={[
                         styles.tag,
-                        item.version.companyResearch
-                          ? styles.tagOn
-                          : styles.tagOff,
+                        researchComplete ? styles.tagOn : styles.tagOff,
                       ]}
                     >
-                      Research {item.version.companyResearch ? "✓" : "—"}
+                      Research {researchComplete ? "✓" : "—"}
                     </Text>
 
                     <Text

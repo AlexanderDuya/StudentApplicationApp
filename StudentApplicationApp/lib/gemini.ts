@@ -437,23 +437,47 @@ export async function calculateApplicationStrength(args: {
 
   const { coverLetter, company, role, jobDescription, bulletPoints } = args;
 
+  console.log("GEMINI STRENGTH CALCULATOR INPUT");
+  console.log("Company:", company);
+  console.log("Role:", role);
+  console.log("Cover Letter Length:", coverLetter?.length ?? 0);
+  console.log("Cover Letter Content:", `"${coverLetter}"`);
+  console.log("Job Description Length:", jobDescription?.length ?? 0);
+  console.log(
+    "Job Description Preview:",
+    jobDescription?.substring(0, 50) ?? "EMPTY",
+  );
+  console.log("Bullet Points Count:", bulletPoints?.length ?? 0);
+  console.log("Bullet Points:", bulletPoints);
+  console.log("GEMINI STRENGTH CALCULATOR OUTPUT");
+
   const prompt = `
 You are an application strength scorer. You MUST be harsh and strict. Low effort = low score. No exceptions.
 
 ROLE: ${role}
 COMPANY: ${company}
 
-JOB DESCRIPTION:
+JOB DESCRIPTION (reference only, do NOT score this):
 ${jobDescription ?? "Not provided"}
 
-CANDIDATE BULLET POINTS:
-${bulletPoints?.join("\n") ?? "None provided"}
+*** CRITICAL INSTRUCTION ***
+ONLY evaluate what the STUDENT provided below.
+Do NOT mistake the job description for the student's work.
+Focus ONLY on:
+1. CANDIDATE BULLET POINTS: what the student wrote (may be empty)
+2. COVER LETTER: what the student wrote (may be empty)
 
-COVER LETTER:
-${coverLetter}
+If the student provided no bullet points AND no cover letter, all component scores should be 0-15 range.
+
+CANDIDATE BULLET POINTS (what the student wrote could be empty):
+${bulletPoints?.length === 0 ? "[EMPTY: Student has not provided any bullet points]" : bulletPoints?.join("\n")}
+
+COVER LETTER (what the student wrote could be empty):
+${!coverLetter ? "[EMPTY - Student has not written a cover letter]" : coverLetter}
 
 STEP 1 — LENGTH AND EFFORT CHECK (apply before scoring anything):
-- Count the number of lines and paragraphs in the cover letter.
+- If BOTH cover letter and bullet points are [EMPTY], cap ALL components at 0-10 maximum.
+- Count the number of lines and paragraphs in the cover letter (if it exists).
 - 1–2 sentences: ALL components MUST be 0–10. Stop. Do not score higher.
 - 3–4 sentences: ALL components MUST be 0–20. Stop. Do not score higher.
 - Only a cover letter with 1 or more full paragraphs is eligible to score above 40 in any component.
@@ -461,28 +485,32 @@ STEP 1 — LENGTH AND EFFORT CHECK (apply before scoring anything):
 STEP 2 — COMPONENT SCORING (only if cover letter passes length check):
 
 ROLE ALIGNMENT FROM COVER LETTER AND BULLET POINTS (weight 30% of overall):
-- 0–20:   Fewer than 3 words or phrases from the job description appear in the cover letter, and weak bullet points with no clear evidence
+- 0–10:   Student provided NOTHING (no cover letter AND no bullet points)
+- 11–20:  Fewer than 3 words or phrases from the job description appear in the cover letter, and weak bullet points with no clear evidence
 - 21–40:  1–2 job description keywords present but no responsibilities addressed
 - 41–65:  Several keywords used but role requirements are not explicitly tackled
 - 66–85:  Most key requirements addressed with relevant, specific language
 - 86–100: Many core requirements addressed with precise role-matched evidence
 
 EVIDENCE QUALITY FROM BULLET POINTS (weight 25% of overall):
-- 0–20:   Zero examples, only vague claims ("I am passionate", "I work hard", "I am skilled")
+- 0–10:   Student provided NO BULLET POINTS
+- 11–20:  Zero examples, only vague claims ("I am passionate", "I work hard", "I am skilled")
 - 21–40:  One vague example with no numbers, outcomes, or specifics
 - 41–65:  1–2 examples present but metrics or measurable outcomes are missing
 - 66–85:  2+ examples with quantified impact (%, £, count, time saved, etc.)
 - 86–100: 3+ examples with strong measurable outcomes drawn from the bullet points
 
 COVER LETTER STRUCTURE (weight 25% of overall):
-- 0–20:   No structure, a single line or sentence, cannot be called a letter
+- 0–10:   Student provided NO COVER LETTER or only "[EMPTY]"
+- 11–20:  No structure, a single line or sentence, cannot be called a letter
 - 21–40:  A short paragraph exists but has no opening motivation, does not address role requirements or express company research
 - 41–65:  Some structure but motivation is generic, explains some fit but not clearly linked to role and surface level knowledge of the company
 - 66–85:  Clear opening with motivation, body addresses multiple role requirements with specific evidence, some company research and personalisation
 - 86–100: Compelling opening with specific motivation, well structured body that addresses most role requirements with strong evidence, and multiple clear references to the company culture, values, mission, or products throughout the cover letter
 
 COMPANY PERSONALISATION (weight 20% of overall):
-- 0–20:   Company not mentioned, or mentioned once with zero context or research
+- 0–10:   Student provided NO COVER LETTER, so no personalisation possible
+- 11–20:  Company not mentioned, or mentioned once with zero context or research
 - 21–40:  Company name used but no values, products, mission, or culture referenced at all
 - 41–65:  One surface-level reference (e.g. "I admire your mission") with no real depth
 - 66–85:  A specific company value, product, or initiative referenced meaningfully
@@ -492,12 +520,22 @@ STEP 3 — OVERALL:
 Calculate as (roleAlignment * 0.30) + (evidenceQuality * 0.25) + (coverLetterStructure * 0.25) + (companyPersonalisation * 0.20), rounded to nearest integer.
 
 STEP 4 — CHANGES:
-List 2 things that positively contributed to the score. If the cover letter is very weak, keep points values between 1–5 only.
+List 2 things that positively contributed to the score.
+
+CRITICAL RULE - If BOTH cover letter and bullet points are [EMPTY]:
+- DO NOT award any points
+- Set all "points" values to 0
+- List 2 things the student should focus on next (what to work on, not praise)
+- Do NOT praise them for providing empty fields or "following instructions"
+- Example: { "points": 0, "reason": "Add specific, measurable evidence in your bullet points" }
+- Example: { "points": 0, "reason": "Write a tailored cover letter addressing the role and company" }
+
+If the cover letter is very weak (but something was provided), keep points values between 1–5 only.
 
 Return ONLY valid JSON, no markdown, no commentary:
 {
   "overall": <integer 0–100>,
-  "explanation": "<one sentence: tell the candidate directly using 'you'/'your' why this score was given, be honest but encouraging. Highlighting best thing about their application as supporting evidence.'>",
+  "explanation": "<one sentence: tell the candidate directly using 'you'/'your' why this score was given, be honest but encouraging. Highlighting best thing about their application as supporting evidence. If empty, say 'Your application is incomplete, you haven't provided a cover letter or bullet points yet for us to analyse.'>",
   "nextAction": "<one sentence: the single most impactful improvement that the student can make next (for example more personalisation, more evidence in bullet points etc), must sound encouraging>",
   "components": {
     "roleAlignment": <integer 0–100>,
@@ -506,8 +544,8 @@ Return ONLY valid JSON, no markdown, no commentary:
     "companyPersonalisation": <integer 0–100>
   },
   "changes": [
-    { "points": <int>, "reason": "<what the candidate did well>" },
-    { "points": <int>, "reason": "<second positive thing>" }
+    { "points": <int>, "reason": "<what to work on next or what the candidate did well>" },
+    { "points": <int>, "reason": "<second actionable item>" }
   ]
 }
 `.trim();

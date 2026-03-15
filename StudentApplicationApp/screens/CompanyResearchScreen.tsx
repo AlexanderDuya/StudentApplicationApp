@@ -38,6 +38,10 @@ export function CompanyResearchScreen({
     setWhyWorkHere(initialNotes?.whyWorkHere ?? "");
   }, [initialNotes]);
 
+  const markAsChangesMade = () => {
+    updateWorkspace(applicationId, { hasVersionChanges: true });
+  };
+
   const handleSave = () => {
     const notes: CompanyResearchNotes = {
       whatDoesCompanyDo: whatDoesCompanyDo.trim(),
@@ -91,7 +95,10 @@ export function CompanyResearchScreen({
             <Text style={styles.questionLabel}>What does the company do?</Text>
             <TextInput
               value={whatDoesCompanyDo}
-              onChangeText={setWhatDoesCompanyDo}
+              onChangeText={(value) => {
+                setWhatDoesCompanyDo(value);
+                markAsChangesMade();
+              }}
               multiline
               placeholder="E.g., What the product is, who it serves, why it matters..."
               placeholderTextColor="#9CA3AF"
@@ -105,7 +112,10 @@ export function CompanyResearchScreen({
             </Text>
             <TextInput
               value={recentNews}
-              onChangeText={setRecentNews}
+              onChangeText={(value) => {
+                setRecentNews(value);
+                markAsChangesMade();
+              }}
               multiline
               placeholder="Recent launches, acquisitions, strategy shifts, quarterly highlights..."
               placeholderTextColor="#9CA3AF"
@@ -117,7 +127,10 @@ export function CompanyResearchScreen({
             <Text style={styles.questionLabel}>Company culture & values</Text>
             <TextInput
               value={cultureValues}
-              onChangeText={setCultureValues}
+              onChangeText={(value) => {
+                setCultureValues(value);
+                markAsChangesMade();
+              }}
               multiline
               placeholder="Values, culture signals from careers page, leadership principles, team behaviours..."
               placeholderTextColor="#9CA3AF"
@@ -131,7 +144,10 @@ export function CompanyResearchScreen({
             </Text>
             <TextInput
               value={whyWorkHere}
-              onChangeText={setWhyWorkHere}
+              onChangeText={(value) => {
+                setWhyWorkHere(value);
+                markAsChangesMade();
+              }}
               multiline
               placeholder="Your motivation, alignment, and how your experience connects to the mission..."
               placeholderTextColor="#9CA3AF"

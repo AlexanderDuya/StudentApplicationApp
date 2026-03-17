@@ -67,6 +67,7 @@ export type EvidenceInputs = {
 };
 
 export type EvidenceByReq = Record<string, EvidenceInputs>;
+export type ChecklistStepsState = Record<string, boolean>;
 
 export type ApplicationVersion = {
   id: string;
@@ -81,6 +82,7 @@ export type ApplicationVersion = {
   cvBullets?: string[];
   coverLetter?: string;
   evidenceByReq?: EvidenceByReq;
+  checklistSteps?: ChecklistStepsState;
 };
 
 export type Workspace = {
@@ -99,6 +101,7 @@ export type Workspace = {
   cvBullets?: string[];
   coverLetter?: string;
   evidenceByReq?: EvidenceByReq;
+  checklistSteps?: ChecklistStepsState;
   versions?: ApplicationVersion[];
   createdAt: number;
 };
@@ -110,11 +113,14 @@ const LAST_WORKSPACE_ID_KEY = "lastWorkspaceId:v1";
 const makeId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 const deepClone = <T,>(value: T): T => {
+  if (value === undefined || value === null) return value;
+
   try {
     if (typeof globalThis.structuredClone === "function") {
       return globalThis.structuredClone(value);
     }
   } catch {}
+
   return JSON.parse(JSON.stringify(value)) as T;
 };
 
@@ -240,6 +246,7 @@ export default function App() {
       evidenceByReq: deepClone(
         version.evidenceByReq ?? root.evidenceByReq ?? {},
       ),
+      checklistSteps: deepClone(version.checklistSteps ?? root.checklistSteps),
       versions: undefined,
     };
 
@@ -337,6 +344,8 @@ export default function App() {
             strengthApplicationId={strengthApplicationId}
             company={ws?.company}
             role={ws?.role}
+            checklistSteps={ws?.checklistSteps}
+            updateWorkspace={updateWorkspace}
           />
         );
       }
@@ -500,6 +509,10 @@ export default function App() {
                   if (w.id !== currentRootId) return w;
 
                   const now = Date.now();
+                  const savedChecklistSteps = deepClone(
+                    current?.checklistSteps ?? w.checklistSteps,
+                  );
+
                   const version: ApplicationVersion = {
                     id: versionId,
                     name: versionName.trim(),
@@ -521,11 +534,13 @@ export default function App() {
                     evidenceByReq: deepClone(
                       current?.evidenceByReq ?? w.evidenceByReq ?? {},
                     ),
+                    checklistSteps: savedChecklistSteps,
                   };
 
                   return {
                     ...w,
                     coverLetter: coverLetterText,
+                    checklistSteps: savedChecklistSteps,
                     versions: [...(w.versions ?? []), version],
                   };
                 }),

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Screen } from "../App";
+import type { Screen, Workspace, ChecklistStepsState } from "../App";
 import {
   View,
   Text,
@@ -17,6 +17,8 @@ export interface WorkspaceOverviewScreenProps {
   strengthApplicationId: string;
   company?: string;
   role?: string;
+  checklistSteps?: ChecklistStepsState;
+  updateWorkspace?: (id: string, patch: Partial<Workspace>) => void;
 }
 
 type FutureScreen =
@@ -42,13 +44,13 @@ const BASE_STEPS: Step[] = [
   {
     id: 1,
     title: "Review job description",
-    completed: true,
+    completed: false,
     screen: "job-spec-breakdown",
   },
   {
     id: 2,
     title: "Key requirements extracted",
-    completed: true,
+    completed: false,
     screen: "job-spec-breakdown",
   },
   {
@@ -89,14 +91,24 @@ const BASE_STEPS: Step[] = [
   },
 ];
 
+const applySavedSteps = (saved?: ChecklistStepsState): Step[] =>
+  BASE_STEPS.map((step) => ({
+    ...step,
+    completed: saved?.[String(step.id)] ?? false,
+  }));
+
 export function WorkspaceOverviewScreen({
   onNavigate,
   applicationId,
   strengthApplicationId,
   company,
   role,
+  checklistSteps,
+  updateWorkspace,
 }: WorkspaceOverviewScreenProps) {
-  const [steps, setSteps] = useState<Step[]>(BASE_STEPS);
+  const [steps, setSteps] = useState<Step[]>(() =>
+    applySavedSteps(checklistSteps),
+  );
 
   const [strengthResult, setStrengthResult] = useState<StrengthResult | null>(
     null,
@@ -109,28 +121,29 @@ export function WorkspaceOverviewScreen({
     let cancelled = false;
 
     const load = async () => {
+      if (checklistSteps !== undefined) {
+        setSteps(applySavedSteps(checklistSteps));
+        return;
+      }
+
       try {
         const raw = await AsyncStorage.getItem(stepsStorageKey(applicationId));
 
-        console.log(
-          "Loaded steps for key:",
-          stepsStorageKey(applicationId),
-          raw,
-        );
-
-        if (!raw) return;
-
-        const saved: Record<string, boolean> = JSON.parse(raw);
         if (cancelled) return;
 
-        setSteps((prev) =>
-          prev.map((s) => ({
-            ...s,
-            completed: saved[String(s.id)] ?? s.completed,
-          })),
-        );
+        if (!raw) {
+          setSteps(applySavedSteps());
+          return;
+        }
+
+        const saved = JSON.parse(raw) as ChecklistStepsState;
+
+        setSteps(applySavedSteps(saved));
+        updateWorkspace?.(applicationId, { checklistSteps: saved });
       } catch {
-        // ignore load errors for now
+        if (!cancelled) {
+          setSteps(applySavedSteps());
+        }
       }
     };
 
@@ -139,7 +152,7 @@ export function WorkspaceOverviewScreen({
     return () => {
       cancelled = true;
     };
-  }, [applicationId]);
+  }, [applicationId, checklistSteps, updateWorkspace]);
 
   useEffect(() => {
     setStrengthResult(null);
@@ -158,10 +171,12 @@ export function WorkspaceOverviewScreen({
   }, [strengthApplicationId]);
 
   const saveSteps = async (nextSteps: Step[]) => {
-    const map: Record<string, boolean> = {};
+    const map: ChecklistStepsState = {};
     nextSteps.forEach((s) => {
       map[String(s.id)] = s.completed;
     });
+
+    updateWorkspace?.(applicationId, { checklistSteps: map });
 
     await AsyncStorage.setItem(
       stepsStorageKey(applicationId),
@@ -311,7 +326,6 @@ export function WorkspaceOverviewScreen({
             <TouchableOpacity
               key={step.id}
               onPress={() => {
-                // TODO: right now it toggles but i might want it to do some extra stuff later will ask stakeholder
                 toggleStep(step.id);
               }}
               style={styles.stepItem}

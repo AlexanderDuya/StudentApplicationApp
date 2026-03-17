@@ -69,14 +69,12 @@ export function TailorCoverLetterScreen({
   const [nameError, setNameError] = useState<string | null>(null);
   const [strengthLoading, setStrengthLoading] = useState(false);
   const [noChangesOpen, setNoChangesOpen] = useState(false);
-  const [firstSaveWarningOpen, setFirstSaveWarningOpen] = useState(false);
 
   useEffect(() => {
     setCoverLetter(initialCoverLetter ?? "");
     setNameOpen(false);
     setNameError(null);
     setNoChangesOpen(false);
-    setFirstSaveWarningOpen(false);
   }, [applicationId, initialCoverLetter]);
 
   const suggestedName = `${company || "Company"} - ${
@@ -150,17 +148,6 @@ export function TailorCoverLetterScreen({
       return;
     }
 
-    if (nextVersionNumber === 1 && !isEditingVersion && !text) {
-      setNameOpen(false);
-      setFirstSaveWarningOpen(true);
-      return;
-    }
-
-    if (!text) {
-      setNameError("Your cover letter is empty.");
-      return;
-    }
-
     if (isEditingVersion && !hasVersionChanges) {
       setNameOpen(false);
       setNoChangesOpen(true);
@@ -168,46 +155,6 @@ export function TailorCoverLetterScreen({
     }
 
     const versionId = makeId();
-
-    updateWorkspace?.(applicationId, {
-      coverLetter: text,
-      hasVersionChanges: false,
-      isEditingVersion: false,
-    });
-
-    onSaveNamedVersion?.(applicationId, versionId, name, text);
-    setNameOpen(false);
-
-    setStrengthLoading(true);
-    try {
-      const result = await calculateApplicationStrength({
-        coverLetter: text,
-        company: company.trim(),
-        role: role.trim(),
-        jobDescription,
-        bulletPoints,
-      });
-
-      await AsyncStorage.setItem(
-        strengthStorageKey(versionId),
-        JSON.stringify(result),
-      );
-
-      console.log("Strength saved for version:", versionId, result.overall);
-    } catch (e) {
-      console.warn("Strength calculation failed:", e);
-    } finally {
-      setStrengthLoading(false);
-      onNavigate("application-library");
-    }
-  };
-
-  const handleConfirmFirstSaveWarning = async () => {
-    const name = versionName.trim();
-    const text = coverLetter.trim();
-    const versionId = makeId();
-
-    setFirstSaveWarningOpen(false);
 
     updateWorkspace?.(applicationId, {
       coverLetter: text,
@@ -427,11 +374,15 @@ export function TailorCoverLetterScreen({
       <Modal transparent visible={noChangesOpen} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>No changes made</Text>
+            <Text style={styles.modalTitle}>
+              No changes made! Try to fill out your application!
+            </Text>
 
             <Text style={styles.modalBody}>
               You need to make a change in at least one section before saving a
-              new version.
+              new version. The more complete your application, the better the
+              feedback we will be able to give you and the stronger your future
+              applications will be!
             </Text>
 
             <View style={styles.modalActions}>
@@ -440,38 +391,6 @@ export function TailorCoverLetterScreen({
                 style={styles.modalBtnPrimary}
               >
                 <Text style={styles.modalBtnPrimaryText}>Okay</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal transparent visible={firstSaveWarningOpen} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              Try to fill out your application!
-            </Text>
-
-            <Text style={styles.modalBody}>
-              Fill out as much as possible, the more complete your application,
-              the better the feedback we will be able to give you and the
-              stronger your future applications will be!
-            </Text>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                onPress={() => setFirstSaveWarningOpen(false)}
-                style={styles.modalBtnSecondary}
-              >
-                <Text style={styles.modalBtnSecondaryText}>Keep editing</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleConfirmFirstSaveWarning}
-                style={styles.modalBtnPrimary}
-              >
-                <Text style={styles.modalBtnPrimaryText}>Save & continue</Text>
               </TouchableOpacity>
             </View>
           </View>

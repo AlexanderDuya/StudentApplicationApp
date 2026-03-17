@@ -7,6 +7,7 @@ import {
   TextInput,
   StyleSheet,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import type { Screen, Workspace, CompanyResearchNotes } from "../App";
 
 interface CompanyResearchScreenProps {
@@ -76,9 +77,14 @@ export function CompanyResearchScreen({
 
       <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
         <View style={styles.infoCard}>
-          <Text style={styles.infoIcon}>🔍</Text>
+          <Feather
+            name="search"
+            size={20}
+            color="#1E40AF"
+            style={styles.infoIcon}
+          />
           <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>Research tips</Text>
+            <Text style={styles.infoTitle}>Research tip</Text>
             <Text style={styles.infoText}>
               Understanding the company helps you tailor your application and
               prepare for interviews.
@@ -157,25 +163,41 @@ export function CompanyResearchScreen({
         </View>
 
         <View style={styles.resourcesCard}>
-          <Text style={styles.resourcesTitle}>📚 Helpful resources</Text>
-
-          <View style={styles.resourceItem}>
-            <Text style={styles.resourceText}>
-              Company website & About page
-            </Text>
-            <Text style={styles.resourceArrow}>→</Text>
+          <View style={styles.resourcesHeader}>
+            <Feather name="book-open" size={18} color="#166534" />
+            <Text style={styles.resourcesTitle}>Helpful advice</Text>
           </View>
 
-          <View style={styles.resourceItem}>
-            <Text style={styles.resourceText}>Recent news articles</Text>
-            <Text style={styles.resourceArrow}>→</Text>
+          <View style={styles.resourceBulletRow}>
+            <Text style={styles.resourceBullet}>•</Text>
+            <Text style={styles.resourceText}>
+              Search the companies about and mission statements to understand
+              what they do.
+            </Text>
           </View>
 
-          <View style={styles.resourceItem}>
+          <View style={styles.resourceBulletRow}>
+            <Text style={styles.resourceBullet}>•</Text>
             <Text style={styles.resourceText}>
-              Employee reviews (Glassdoor)
+              Search the companies latest news and press releases to find for
+              recent developments and initiatives.
             </Text>
-            <Text style={styles.resourceArrow}>→</Text>
+          </View>
+
+          <View style={styles.resourceBulletRow}>
+            <Text style={styles.resourceBullet}>•</Text>
+            <Text style={styles.resourceText}>
+              Check their careers page and search for their values and
+              behaviours to see what they prioritise.
+            </Text>
+          </View>
+
+          <View style={styles.resourceBulletRow}>
+            <Text style={styles.resourceBullet}>•</Text>
+            <Text style={styles.resourceText}>
+              Look at employee reviews on glassdoor and LinkedIn posts to see a
+              different perspective.
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -231,7 +253,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
   },
-  infoIcon: { fontSize: 20 },
+  infoIcon: { marginTop: 1 },
   infoContent: { flex: 1 },
   infoTitle: {
     fontSize: 14,
@@ -266,15 +288,30 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
   },
-  resourcesTitle: { fontSize: 14, color: "#166534", marginBottom: 12 },
-  resourceItem: {
+  resourcesHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
+    gap: 8,
+    marginBottom: 12,
   },
-  resourceText: { fontSize: 14, color: "#15803D" },
-  resourceArrow: { fontSize: 16, color: "#15803D" },
+  resourcesTitle: { fontSize: 14, color: "#166534" },
+  resourceBulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 10,
+  },
+  resourceBullet: {
+    fontSize: 16,
+    color: "#15803D",
+    lineHeight: 20,
+  },
+  resourceText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#15803D",
+    lineHeight: 20,
+  },
 
   footer: {
     paddingHorizontal: 24,

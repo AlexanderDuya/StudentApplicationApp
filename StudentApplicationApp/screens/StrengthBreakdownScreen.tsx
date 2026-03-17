@@ -9,6 +9,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { strengthStorageKey, type StrengthResult } from "../lib/gemini";
 
 interface StrengthBreakdownScreenProps {
@@ -77,7 +78,7 @@ export function StrengthBreakdownScreen({
           onPress={() => onNavigate("workspace-overview", applicationId)}
           style={styles.backButton}
         >
-          <Text style={styles.backIcon}>←</Text>
+          <Feather name="arrow-left" size={20} color="#374151" />
         </TouchableOpacity>
 
         <View style={styles.headerInfo}>
@@ -99,7 +100,9 @@ export function StrengthBreakdownScreen({
           </View>
         ) : !result ? (
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyIcon}>📊</Text>
+            <View style={styles.emptyIconWrap}>
+              <Feather name="bar-chart-2" size={36} color="#9CA3AF" />
+            </View>
             <Text style={styles.emptyTitle}>No score yet</Text>
             <Text style={styles.emptyText}>
               Complete and save your application to calculate your application
@@ -165,7 +168,12 @@ export function StrengthBreakdownScreen({
                 <Text style={styles.changeTitle}>Why your score changed</Text>
                 {result.changes.map((change, changeIndex) => (
                   <View key={changeIndex} style={styles.changeRow}>
-                    <Text style={styles.changeIcon}>↗</Text>
+                    <Feather
+                      name="trending-up"
+                      size={14}
+                      color="#22C55E"
+                      style={styles.changeIcon}
+                    />
                     <Text style={styles.changeText}>
                       <Text style={styles.changeHighlight}>
                         +{change.points} pts:
@@ -296,7 +304,7 @@ export function StrengthBreakdownScreen({
 
             <View style={styles.actionCard}>
               <View style={styles.actionIconWrap}>
-                <Text style={styles.actionIconText}>✓</Text>
+                <Feather name="check" size={14} color="#0F766E" />
               </View>
               <View style={styles.flex1}>
                 <Text style={styles.actionLabel}>Most impactful next step</Text>
@@ -349,7 +357,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  backIcon: { fontSize: 20, color: "#374151" },
   headerInfo: { flex: 1, paddingHorizontal: 10 },
   headerTitle: { fontSize: 20, color: "#111827" },
   headerSubtitle: { fontSize: 14, color: "#6B7280", marginTop: 2 },
@@ -373,7 +380,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     gap: 12,
   },
-  emptyIcon: { fontSize: 48 },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   emptyTitle: { fontSize: 18, color: "#111827" },
   emptyText: {
     fontSize: 14,
@@ -458,7 +472,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     alignItems: "flex-start",
   },
-  changeIcon: { color: "#22C55E", fontSize: 14, marginTop: 1 },
+  changeIcon: { marginTop: 1 },
   changeText: { flex: 1, fontSize: 12, color: "#6B7280", lineHeight: 16 },
   changeHighlight: { color: "#7C3AED", fontWeight: "600" },
 
@@ -515,7 +529,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 1,
   },
-  actionIconText: { color: "#0F766E", fontSize: 12, fontWeight: "700" },
   actionLabel: { fontSize: 12, color: "#115E59", fontWeight: "600" },
   actionText: { fontSize: 12, color: "#115E59", marginTop: 4, lineHeight: 16 },
 

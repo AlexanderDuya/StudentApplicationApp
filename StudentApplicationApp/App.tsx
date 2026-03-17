@@ -254,24 +254,25 @@ export default function App() {
     return newId;
   };
 
-  const clearAllApplications = async () => {
-    try {
-      const checklistKeys = workspaces.map(
-        (w) => `workspace:${w.id}:checklistSteps`,
+  const deleteApplication = (rootApplicationId: string) => {
+    console.log("Deleting application with root id:", rootApplicationId);
+
+    setWorkspaces((prev) => {
+      const updatedWorkspaces = prev.filter((workspace) => {
+        const applicationId = workspace.rootId ?? workspace.id;
+        return applicationId !== rootApplicationId;
+      });
+
+      console.log(
+        "Application deleted. Remaining workspaces:",
+        updatedWorkspaces,
       );
 
-      await AsyncStorage.multiRemove([
-        WORKSPACES_STORAGE_KEY,
-        LAST_WORKSPACE_ID_KEY,
-        ...checklistKeys,
-      ]);
-    } catch (e) {
-      console.log("Clear error:", e);
-    } finally {
-      setWorkspaces([]);
-      setSelectedApplicationId(null);
-      setCurrentScreen("home");
-    }
+      return updatedWorkspaces;
+    });
+
+    setSelectedApplicationId(null);
+    setCurrentScreen("home");
   };
 
   const navigate = (screen: Screen, applicationId?: string) => {
@@ -289,13 +290,7 @@ export default function App() {
   const renderScreen = () => {
     switch (currentScreen) {
       case "home":
-        return (
-          <HomeScreen
-            onNavigate={navigate}
-            workspaces={workspaces}
-            onClearAll={clearAllApplications}
-          />
-        );
+        return <HomeScreen onNavigate={navigate} workspaces={workspaces} />;
 
       case "add-application":
         return (
@@ -383,13 +378,7 @@ export default function App() {
 
       case "evidence-mapper": {
         if (!selectedApplicationId) {
-          return (
-            <HomeScreen
-              onNavigate={navigate}
-              workspaces={workspaces}
-              onClearAll={clearAllApplications}
-            />
-          );
+          return <HomeScreen onNavigate={navigate} workspaces={workspaces} />;
         }
 
         const ws = workspaces.find((w) => w.id === selectedApplicationId);
@@ -412,13 +401,7 @@ export default function App() {
 
       case "tailor-cv": {
         if (!selectedApplicationId) {
-          return (
-            <HomeScreen
-              onNavigate={navigate}
-              workspaces={workspaces}
-              onClearAll={clearAllApplications}
-            />
-          );
+          return <HomeScreen onNavigate={navigate} workspaces={workspaces} />;
         }
 
         const ws = workspaces.find((w) => w.id === selectedApplicationId);
@@ -441,13 +424,7 @@ export default function App() {
 
       case "company-research": {
         if (!selectedApplicationId) {
-          return (
-            <HomeScreen
-              onNavigate={navigate}
-              workspaces={workspaces}
-              onClearAll={clearAllApplications}
-            />
-          );
+          return <HomeScreen onNavigate={navigate} workspaces={workspaces} />;
         }
 
         const ws = workspaces.find((w) => w.id === selectedApplicationId);
@@ -466,13 +443,7 @@ export default function App() {
 
       case "tailor-cover-letter": {
         if (!selectedApplicationId) {
-          return (
-            <HomeScreen
-              onNavigate={navigate}
-              workspaces={workspaces}
-              onClearAll={clearAllApplications}
-            />
-          );
+          return <HomeScreen onNavigate={navigate} workspaces={workspaces} />;
         }
 
         const ws = workspaces.find((w) => w.id === selectedApplicationId);
@@ -569,6 +540,7 @@ export default function App() {
               if (!newId) return;
               navigate("workspace-overview", newId);
             }}
+            onDeleteApplication={deleteApplication}
           />
         );
       }
@@ -593,13 +565,7 @@ export default function App() {
       }
 
       default:
-        return (
-          <HomeScreen
-            onNavigate={navigate}
-            workspaces={workspaces}
-            onClearAll={clearAllApplications}
-          />
-        );
+        return <HomeScreen onNavigate={navigate} workspaces={workspaces} />;
     }
   };
 

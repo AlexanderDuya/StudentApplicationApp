@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import { shareAsync } from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
@@ -24,6 +25,7 @@ interface ApplicationLibraryScreenProps {
   workspaces: Workspace[];
   rootApplicationId?: string;
   onEditVersion: (rootWorkspaceId: string, versionId: string) => void;
+  onDeleteApplication: (rootWorkspaceId: string) => void;
 }
 
 const hasResearchContent = (research?: CompanyResearchNotes) =>
@@ -134,6 +136,7 @@ export function ApplicationLibraryScreen({
   workspaces,
   rootApplicationId,
   onEditVersion,
+  onDeleteApplication,
 }: ApplicationLibraryScreenProps) {
   const [strengthScores, setStrengthScores] = useState<Record<string, number>>(
     {},
@@ -253,8 +256,33 @@ export function ApplicationLibraryScreen({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Application Library</Text>
-        <Text style={styles.headerSubtitle}>Saved versions</Text>
+        <View style={styles.headerText}>
+          <Text style={styles.headerTitle}>Application Library</Text>
+          <Text style={styles.headerSubtitle}>Saved versions</Text>
+        </View>
+
+        {rootApplicationId ? (
+          <TouchableOpacity
+            onPress={() =>
+              Alert.alert(
+                "Delete application?",
+                "This will permanently delete this application and all saved versions from the app.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => onDeleteApplication(rootApplicationId),
+                  },
+                ],
+              )
+            }
+            style={styles.deleteButton}
+          >
+            <Feather name="trash-2" size={16} color="#DC2626" />
+            <Text style={styles.deleteButtonText}>Delete</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <ScrollView
@@ -355,9 +383,29 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
+  headerText: { flex: 1 },
   headerTitle: { fontSize: 20, color: "#111827" },
   headerSubtitle: { fontSize: 12, color: "#6B7280", marginTop: 4 },
+
+  deleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  deleteButtonText: {
+    color: "#DC2626",
+    fontSize: 12,
+  },
 
   scrollView: { flex: 1 },
   emptyText: { color: "#6B7280", fontSize: 14 },

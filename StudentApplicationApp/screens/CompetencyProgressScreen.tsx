@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import type { Screen } from "../App";
 
 interface ProgressCompetencyScreenProps {
@@ -20,7 +21,7 @@ type Competency = {
   level: Level;
   description: string;
   progress: number;
-  icon: string;
+  icon: keyof typeof Feather.glyphMap;
 };
 
 export function ProgressCompetencyScreen({
@@ -40,7 +41,7 @@ export function ProgressCompetencyScreen({
       level: "Gold",
       description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
       progress: 100,
-      icon: "🏆",
+      icon: "award",
     },
     {
       id: "2",
@@ -49,7 +50,7 @@ export function ProgressCompetencyScreen({
       description:
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.",
       progress: 65,
-      icon: "📌",
+      icon: "target",
     },
     {
       id: "3",
@@ -58,7 +59,7 @@ export function ProgressCompetencyScreen({
       description:
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut enim ad minim veniam.",
       progress: 30,
-      icon: "⭐",
+      icon: "star",
     },
   ];
 
@@ -104,7 +105,7 @@ export function ProgressCompetencyScreen({
         <View style={styles.content}>
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionIcon}>🏆</Text>
+              <Feather name="award" size={18} color="#111827" />
               <Text style={styles.sectionTitle}>Competencies</Text>
             </View>
 
@@ -120,7 +121,12 @@ export function ProgressCompetencyScreen({
                 return (
                   <View key={comp.id} style={styles.competencyCard}>
                     <View style={styles.competencyHeader}>
-                      <Text style={styles.competencyIcon}>{comp.icon}</Text>
+                      <Feather
+                        name={comp.icon}
+                        size={20}
+                        color="#14B8A6"
+                        style={styles.competencyIcon}
+                      />
 
                       <View style={styles.competencyInfo}>
                         <View style={styles.competencyTitleRow}>
@@ -196,7 +202,7 @@ export function ProgressCompetencyScreen({
 
           <View style={styles.trendCard}>
             <View style={styles.trendHeader}>
-              <Text style={styles.trendIcon}>📈</Text>
+              <Feather name="bar-chart-2" size={18} color="#111827" />
               <Text style={styles.trendTitle}>Strength Trend</Text>
             </View>
 
@@ -237,12 +243,15 @@ const styles = StyleSheet.create({
     paddingVertical: 28,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 20,
     color: "#FFFFFF",
     marginBottom: 4,
-    fontWeight: "700",
   },
-  headerSubtitle: { fontSize: 12, color: "#99F6E4", marginBottom: 18 },
+  headerSubtitle: {
+    fontSize: 12,
+    color: "#99F6E4",
+    marginBottom: 18,
+  },
 
   statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   statCard: {
@@ -253,12 +262,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statValue: {
-    fontSize: 22,
+    fontSize: 20,
     color: "#FFFFFF",
     marginBottom: 4,
-    fontWeight: "700",
   },
-  statLabel: { fontSize: 12, color: "#99F6E4" },
+  statLabel: {
+    fontSize: 12,
+    color: "#99F6E4",
+  },
 
   content: { paddingHorizontal: 24, paddingVertical: 20 },
 
@@ -269,13 +280,15 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  sectionIcon: { fontSize: 18 },
-  sectionTitle: { fontSize: 16, color: "#111827", fontWeight: "700" },
+  sectionTitle: {
+    fontSize: 16,
+    color: "#111827",
+  },
   sectionDescription: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#6B7280",
     marginBottom: 14,
-    lineHeight: 18,
+    lineHeight: 20,
   },
 
   competenciesList: { gap: 12 },
@@ -299,7 +312,9 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 12,
   },
-  competencyIcon: { fontSize: 28 },
+  competencyIcon: {
+    marginTop: 2,
+  },
   competencyInfo: { flex: 1 },
 
   competencyTitleRow: {
@@ -309,12 +324,25 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     flexWrap: "wrap",
   },
-  competencyName: { fontSize: 16, color: "#111827", fontWeight: "700" },
+  competencyName: {
+    fontSize: 16,
+    color: "#111827",
+  },
 
-  levelBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999 },
-  levelText: { fontSize: 12, fontWeight: "700" },
+  levelBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  levelText: {
+    fontSize: 12,
+  },
 
-  competencyDescription: { fontSize: 13, color: "#6B7280" },
+  competencyDescription: {
+    fontSize: 14,
+    color: "#6B7280",
+    lineHeight: 20,
+  },
 
   competencyProgress: { marginTop: 4 },
   progressLabelRow: {
@@ -322,7 +350,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 6,
   },
-  progressLabel: { fontSize: 12, color: "#6B7280" },
+  progressLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
 
   progressBarBg: {
     height: 8,
@@ -343,13 +374,12 @@ const styles = StyleSheet.create({
   suggestionTitle: {
     fontSize: 14,
     color: "#134E4A",
-    fontWeight: "700",
     marginBottom: 6,
   },
   suggestionDescription: {
-    fontSize: 13,
+    fontSize: 14,
     color: "#115E59",
-    lineHeight: 18,
+    lineHeight: 20,
     marginBottom: 12,
   },
 
@@ -362,7 +392,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
   },
-  primaryBtnText: { color: "#FFFFFF", fontSize: 12, fontWeight: "800" },
+  primaryBtnText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+  },
 
   trendCard: {
     backgroundColor: "#FFFFFF",
@@ -377,8 +410,10 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  trendIcon: { fontSize: 18 },
-  trendTitle: { fontSize: 16, color: "#111827", fontWeight: "700" },
+  trendTitle: {
+    fontSize: 16,
+    color: "#111827",
+  },
 
   trendList: { gap: 12 },
   trendItem: { flexDirection: "row", alignItems: "center", gap: 12 },
@@ -387,7 +422,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#111827",
     marginBottom: 6,
-    fontWeight: "600",
   },
   trendBarBg: {
     height: 8,
@@ -395,6 +429,13 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: "hidden",
   },
-  trendBarFill: { height: "100%", borderRadius: 4, backgroundColor: "#9333EA" },
-  trendPercent: { fontSize: 14, color: "#111827", fontWeight: "700" },
+  trendBarFill: {
+    height: "100%",
+    borderRadius: 4,
+    backgroundColor: "#9333EA",
+  },
+  trendPercent: {
+    fontSize: 14,
+    color: "#111827",
+  },
 });

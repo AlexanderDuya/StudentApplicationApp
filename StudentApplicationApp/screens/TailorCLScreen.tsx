@@ -69,12 +69,14 @@ export function TailorCoverLetterScreen({
   const [nameError, setNameError] = useState<string | null>(null);
   const [strengthLoading, setStrengthLoading] = useState(false);
   const [noChangesOpen, setNoChangesOpen] = useState(false);
+  const [firstSaveOpen, setFirstSaveOpen] = useState(false);
 
   useEffect(() => {
     setCoverLetter(initialCoverLetter ?? "");
     setNameOpen(false);
     setNameError(null);
     setNoChangesOpen(false);
+    setFirstSaveOpen(false);
   }, [applicationId, initialCoverLetter]);
 
   const suggestedName = `${company || "Company"} - ${
@@ -85,6 +87,12 @@ export function TailorCoverLetterScreen({
     if (isEditingVersion && !hasVersionChanges) {
       updateWorkspace?.(applicationId, { hasVersionChanges: true });
     }
+  };
+
+  const openNameModal = () => {
+    setNameError(null);
+    setVersionName(suggestedName);
+    setNameOpen(true);
   };
 
   const handleAnalyse = async () => {
@@ -134,9 +142,17 @@ export function TailorCoverLetterScreen({
       return;
     }
 
-    setNameError(null);
-    setVersionName(suggestedName);
-    setNameOpen(true);
+    if (!isEditingVersion) {
+      setFirstSaveOpen(true);
+      return;
+    }
+
+    openNameModal();
+  };
+
+  const handleContinueFirstSave = () => {
+    setFirstSaveOpen(false);
+    openNameModal();
   };
 
   const handleConfirmSaveVersion = async () => {
@@ -334,6 +350,35 @@ export function TailorCoverLetterScreen({
           </View>
         </View>
       )}
+
+      <Modal transparent visible={firstSaveOpen} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Wait before you save!</Text>
+
+            <Text style={styles.modalBody}>
+              Try to fill out as much of the application as you can so we can
+              give you a better analysis as you progress!
+            </Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={() => setFirstSaveOpen(false)}
+                style={styles.modalBtnSecondary}
+              >
+                <Text style={styles.modalBtnSecondaryText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleContinueFirstSave}
+                style={styles.modalBtnPrimary}
+              >
+                <Text style={styles.modalBtnPrimaryText}>Continue</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal transparent visible={nameOpen} animationType="fade">
         <View style={styles.modalOverlay}>

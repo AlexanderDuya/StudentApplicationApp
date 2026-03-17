@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import type { Screen, Workspace } from "../App";
@@ -13,7 +12,6 @@ import type { Screen, Workspace } from "../App";
 interface HomeScreenProps {
   onNavigate: (screen: Screen, applicationId?: string) => void;
   workspaces: Workspace[];
-  onClearAll: () => void;
 }
 
 const getGreeting = () => {
@@ -32,11 +30,7 @@ type AppSummary = {
   versionCount: number;
 };
 
-export function HomeScreen({
-  onNavigate,
-  workspaces,
-  onClearAll,
-}: HomeScreenProps) {
+export function HomeScreen({ onNavigate, workspaces }: HomeScreenProps) {
   const apps = useMemo<AppSummary[]>(() => {
     const byRoot = new Map<string, Workspace[]>();
 
@@ -89,28 +83,6 @@ export function HomeScreen({
               <Text style={styles.greeting}>{getGreeting()}</Text>
               <Text style={styles.name}>Alexander Duya</Text>
             </View>
-
-            <TouchableOpacity
-              onPress={() =>
-                Alert.alert(
-                  "Delete all applications?",
-                  "This will permanently delete all saved applications and checklist progress on this device.",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Reset",
-                      style: "destructive",
-                      onPress: onClearAll,
-                    },
-                  ],
-                )
-              }
-              style={styles.resetButton}
-            >
-              <Text style={styles.resetButtonText}>
-                🗑️ Reset All Applications
-              </Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.statsCard}>
@@ -368,16 +340,4 @@ const styles = StyleSheet.create({
   },
   addApplicationIcon: { fontSize: 24, color: "#9CA3AF", marginBottom: 8 },
   addApplicationText: { color: "#9CA3AF", fontSize: 14 },
-
-  resetButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-  },
-  resetButtonText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "600",
-  },
 });

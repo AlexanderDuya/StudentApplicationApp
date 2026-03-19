@@ -211,6 +211,12 @@ export function ApplicationLibraryScreen({
     return styles.strengthTagWeak;
   };
 
+  const checklistBadgeStyle = (completedSteps: number) => {
+    if (completedSteps === 8) return styles.checklistTagComplete;
+    if (completedSteps === 0) return styles.checklistTagEmpty;
+    return styles.checklistTagInProgress;
+  };
+
   const handleExport = async (version: ApplicationVersion) => {
     const missing = getMissingSections(version);
 
@@ -299,6 +305,10 @@ export function ApplicationLibraryScreen({
               item.version.companyResearch,
             );
 
+            const completedChecklistSteps = Object.values(
+              item.version.checklistSteps ?? {},
+            ).filter(Boolean).length;
+
             return (
               <View key={item.version.id} style={styles.card}>
                 <View style={{ flex: 1 }}>
@@ -342,6 +352,15 @@ export function ApplicationLibraryScreen({
                       CL {item.version.coverLetter?.trim() ? "✓" : "—"}
                     </Text>
 
+                    <Text
+                      style={[
+                        styles.tag,
+                        checklistBadgeStyle(completedChecklistSteps),
+                      ]}
+                    >
+                      Checklist {completedChecklistSteps}/8
+                    </Text>
+
                     {hasScore && (
                       <Text style={[styles.tag, strengthBadgeStyle(score)]}>
                         Strength Score {score}%
@@ -357,6 +376,7 @@ export function ApplicationLibraryScreen({
                   >
                     <Text style={styles.exportText}>Export</Text>
                   </TouchableOpacity>
+
                   <TouchableOpacity
                     style={styles.editBtn}
                     onPress={() =>
@@ -432,8 +452,22 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
   },
+
   tagOn: { backgroundColor: "#CCFBF1", color: "#115E59" },
   tagOff: { backgroundColor: "#F3F4F6", color: "#6B7280" },
+
+  checklistTagEmpty: {
+    backgroundColor: "#FFE4E6",
+    color: "#9F1239",
+  },
+  checklistTagInProgress: {
+    backgroundColor: "#FEF3C7",
+    color: "#854D0E",
+  },
+  checklistTagComplete: {
+    backgroundColor: "#DCFCE7",
+    color: "#166534",
+  },
 
   strengthTagStrong: { backgroundColor: "#DCFCE7", color: "#166534" },
   strengthTagGood: { backgroundColor: "#FEF3C7", color: "#854D0E" },

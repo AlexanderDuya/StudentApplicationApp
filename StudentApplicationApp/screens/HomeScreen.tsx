@@ -28,49 +28,62 @@ type AppSummary = {
   latestWorkspaceId: string;
   createdAt: number;
   versionCount: number;
+  isComplete: boolean;
 };
 
 export function HomeScreen({ onNavigate, workspaces }: HomeScreenProps) {
   const apps = useMemo<AppSummary[]>(() => {
-    const byRoot = new Map<string, Workspace[]>();
+    const workspacesByRootId = new Map<string, Workspace[]>();
 
-    for (const w of workspaces) {
-      const rootId = (w.rootId ?? w.id) as string;
-      const list = byRoot.get(rootId) ?? [];
-      list.push(w);
-      byRoot.set(rootId, list);
+    for (const workspace of workspaces) {
+      const applicationRootId = workspace.rootId ?? workspace.id;
+      const relatedWorkspaces = workspacesByRootId.get(applicationRootId) ?? [];
+
+      relatedWorkspaces.push(workspace);
+      workspacesByRootId.set(applicationRootId, relatedWorkspaces);
     }
 
-    const summaries: AppSummary[] = [];
+    const applicationSummaries: AppSummary[] = [];
 
-    for (const [rootId, family] of byRoot.entries()) {
-      const latestWorkspace = [...family].sort(
-        (a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0),
+    for (const [applicationRootId, relatedWorkspaces] of workspacesByRootId) {
+      const latestWorkspace = [...relatedWorkspaces].sort(
+        (firstWorkspace, secondWorkspace) =>
+          (secondWorkspace.createdAt ?? 0) - (firstWorkspace.createdAt ?? 0),
       )[0];
 
       const company = latestWorkspace.company?.trim() || "Company not set";
       const role = latestWorkspace.role?.trim() || "Role not set";
 
       let versionCount = 0;
-      for (const w of family) {
-        versionCount += w.versions?.length ?? 0;
+      for (const workspace of relatedWorkspaces) {
+        versionCount += workspace.versions?.length ?? 0;
       }
 
-      summaries.push({
-        rootId,
+      const completedChecklistSteps = Object.values(
+        latestWorkspace.checklistSteps ?? {},
+      ).filter(Boolean).length;
+
+      const isComplete = completedChecklistSteps === 8;
+
+      applicationSummaries.push({
+        rootId: applicationRootId,
         company,
         role,
         latestWorkspaceId: latestWorkspace.id,
         createdAt: latestWorkspace.createdAt ?? 0,
         versionCount,
+        isComplete,
       });
     }
 
-    return summaries.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+    return applicationSummaries.sort(
+      (firstApplication, secondApplication) =>
+        (secondApplication.createdAt ?? 0) - (firstApplication.createdAt ?? 0),
+    );
   }, [workspaces]);
 
-  const activeApps = apps;
-  const completedApps: AppSummary[] = [];
+  const activeApps = apps.filter((app) => !app.isComplete);
+  const completedApps = apps.filter((app) => app.isComplete);
 
   const latest = activeApps[0];
 
@@ -152,13 +165,6 @@ export function HomeScreen({ onNavigate, workspaces }: HomeScreenProps) {
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Active Applications</Text>
-
-            <TouchableOpacity
-              onPress={() => onNavigate("add-application")}
-              style={styles.addButton}
-            >
-              <Text style={styles.addButtonText}>+ Add</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.applicationsList}>
@@ -207,6 +213,10 @@ export function HomeScreen({ onNavigate, workspaces }: HomeScreenProps) {
                     <Text style={styles.companyName}>{app.company}</Text>
                     <Text style={styles.roleName}>{app.role}</Text>
                   </View>
+
+                  <Text style={styles.openHint}>
+                    Tap to view saved versions ({app.versionCount}) →
+                  </Text>
                 </TouchableOpacity>
               ))
             )}
@@ -294,14 +304,9 @@ const styles = StyleSheet.create({
   nextStepButton: { color: "#9333EA", fontSize: 14, fontWeight: "500" },
 
   sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 16,
   },
   sectionTitle: { color: "#111827", fontSize: 18, fontWeight: "600" },
-  addButton: { flexDirection: "row", alignItems: "center" },
-  addButtonText: { color: "#14B8A6", fontSize: 14 },
 
   applicationsList: { gap: 12 },
 
